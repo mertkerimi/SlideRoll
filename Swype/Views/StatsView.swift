@@ -6,6 +6,7 @@ struct StatsView: View {
 
     @State private var initialLoad = true
     @State private var showDuplicates = false
+    @State private var selectedLargest: IdentifiablePhoto? = nil
     private var isLoading: Bool { initialLoad || vm.statsLoading }
 
     var body: some View {
@@ -22,6 +23,10 @@ struct StatsView: View {
         .animation(.easeInOut(duration: 0.3), value: isLoading)
         .sheet(isPresented: $showDuplicates) {
             DuplicatesView().environment(vm).environment(lm)
+        }
+        .sheet(item: $selectedLargest) { photo in
+            LargestPhotoDetailView(photoID: photo.id, bytes: photo.bytes, date: photo.date)
+                .environment(vm).environment(lm)
         }
         .task { await vm.loadLibraryStats(); initialLoad = false }
     }
@@ -57,15 +62,9 @@ struct StatsView: View {
                               title: lm.s.statVideos, count: vm.videoCount, bytes: vm.videoBytes)
                 }
 
-                // Quick stats row
-                HStack(spacing: 12) {
-                    quickStat(icon: "heart.fill", value: "\(vm.favoritesCount)",
-                              label: lm.s.statFavorites, color: Theme.red, action: nil)
-                    quickStat(icon: "trash.fill", value: formatBytes(vm.trashBytes),
-                              label: lm.s.statTrashSize, color: Theme.orange, action: nil)
-                    quickStat(icon: "doc.on.doc.fill", value: "~\(vm.duplicateCount)",
-                              label: lm.s.statDuplicates, color: Theme.accent,
-                              action: vm.duplicateCount > 0 ? { showDuplicates = true } : nil)
+                // Largest photos section
+                if !vm.largestPhotos.isEmpty {
+                    largestPhotosCard
                 }
 
                 // Year chart
@@ -80,6 +79,39 @@ struct StatsView: View {
             .padding(.top, 8)
             .padding(.bottom, 100)
         }
+    }
+
+    // MARK: - Largest Photos Card
+
+    private var largestPhotosCard: some View {
+        let items = vm.largestPhotos.map { IdentifiablePhoto(id: $0.id, bytes: $0.bytes, date: $0.date) }
+
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 6) {
+                Image(systemName: "photo.stack.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Theme.accent)
+                Text(lm.s.statLargestPhotos)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Theme.textSecondary)
+            }
+
+            VStack(spacing: 10) {
+                ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                    Button { selectedLargest = item } label: {
+                        LargestPhotoRow(photoID: item.id, bytes: item.bytes, date: item.date)
+                            .environment(vm)
+                            .environment(lm)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Theme.surface)
+                .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.border, lineWidth: 1))
+        )
     }
 
     // MARK: - Media Card (half width)
@@ -106,44 +138,6 @@ struct StatsView: View {
         )
     }
 
-    // MARK: - Quick Stat (third width)
-
-    private func quickStat(icon: String, value: String, label: String, color: Color, action: (() -> Void)?) -> some View {
-        Button {
-            action?()
-        } label: {
-            VStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(color)
-                Text(value)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .foregroundStyle(Theme.textPrimary)
-                    .minimumScaleFactor(0.7)
-                    .lineLimit(1)
-                Text(label)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(Theme.textTertiary)
-                    .multilineTextAlignment(.center)
-                if action != nil {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(Theme.textTertiary)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.surface)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(action != nil ? color.opacity(0.25) : Theme.border, lineWidth: 1)
-                    )
-            )
-        }
-        .buttonStyle(.plain)
-        .disabled(action == nil)
-    }
 
     // MARK: - Year Chart
 

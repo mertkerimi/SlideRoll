@@ -19,6 +19,8 @@ class PhotoLibraryViewModel {
     var favoritesCount: Int = 0
     var duplicateGroups: [[String]] = []
     var yearlyStorage: [(year: String, bytes: Int64)] = []
+    var largestPhotos: [(id: String, bytes: Int64, date: Date)] = []
+    var largestVideos: [(id: String, bytes: Int64, date: Date, duration: TimeInterval)] = []
 
     // Only count groups where all photos are still undecided
     var duplicateCount: Int {
@@ -170,15 +172,18 @@ class PhotoLibraryViewModel {
         monthGroups.flatMap { $0.pendingIDs }.shuffled()
     }
 
-    // Bytes of photos marked for delete in a specific group (fast — only iterates decided IDs)
-    func toDeleteBytes(in groupID: String) -> Int64 {
+    // Bytes of photos marked for delete in a specific group — runs off main thread
+    func toDeleteBytes(in groupID: String) async -> Int64 {
         guard let group = monthGroups.first(where: { $0.id == groupID }) else { return 0 }
         let ids = group.decisions.compactMap { id, d in d == .delete ? id : nil }
-        return ids.compactMap { allAssets[$0] }.reduce(0) { sum, asset in
-            sum + PHAssetResource.assetResources(for: asset).reduce(0) {
-                $0 + (($1.value(forKey: "fileSize") as? Int64) ?? 0)
+        let assets = ids.compactMap { allAssets[$0] }
+        return await Task.detached(priority: .utility) {
+            assets.reduce(0) { sum, asset in
+                sum + PHAssetResource.assetResources(for: asset).reduce(0) {
+                    $0 + (($1.value(forKey: "fileSize") as? Int64) ?? 0)
+                }
             }
-        }
+        }.value
     }
 
     // Total bytes of all photos in a group — loaded async so it doesn't block
@@ -257,14 +262,14 @@ class PhotoLibraryViewModel {
             var pBytes: Int64 = 0
             var vBytes: Int64 = 0
             var favorites = 0
-            // year -> bytes (photos + videos)
             var yearMap: [String: Int64] = [:]
-            // duplicate detection: day+size -> [assetID]
             let dayFormatter = DateFormatter()
             dayFormatter.dateFormat = "yyyy-MM-dd"
             var dayBuckets: [String: [(id: String, size: Int64)]] = [:]
             let yearFormatter = DateFormatter()
             yearFormatter.dateFormat = "yyyy"
+            // For largest photos: collect all with size + date
+            var allPhotoSizes: [(id: String, bytes: Int64, date: Date)] = []
 
             photoFetch.enumerateObjects { asset, _, _ in
                 var size: Int64 = 0
@@ -280,8 +285,10 @@ class PhotoLibraryViewModel {
 
                 let day = dayFormatter.string(from: date)
                 dayBuckets[day, default: []].append((id: asset.localIdentifier, size: size))
+                allPhotoSizes.append((id: asset.localIdentifier, bytes: size, date: date))
             }
 
+            var allVideoSizes: [(id: String, bytes: Int64, date: Date, duration: TimeInterval)] = []
             videoFetch.enumerateObjects { asset, _, _ in
                 var size: Int64 = 0
                 for resource in PHAssetResource.assetResources(for: asset) {
@@ -291,6 +298,7 @@ class PhotoLibraryViewModel {
                 let date = asset.creationDate ?? Date.distantPast
                 let year = yearFormatter.string(from: date)
                 yearMap[year, default: 0] += size
+                allVideoSizes.append((id: asset.localIdentifier, bytes: size, date: date, duration: asset.duration))
             }
 
             // Find duplicates: same day, same file size → group them
@@ -308,7 +316,11 @@ class PhotoLibraryViewModel {
                 .map { (year: $0.key, bytes: $0.value) }
                 .sorted { $0.year > $1.year }
 
-            return (photoFetch.count, videoFetch.count, pBytes, vBytes, favorites, dupGroups, yearly)
+            // Top 5 largest photos & videos
+            let largestWithDates = Array(allPhotoSizes.sorted { $0.bytes > $1.bytes }.prefix(5))
+            let largestVids      = Array(allVideoSizes.sorted { $0.bytes > $1.bytes }.prefix(5))
+
+            return (photoFetch.count, videoFetch.count, pBytes, vBytes, favorites, dupGroups, yearly, largestWithDates, largestVids)
         }.value
 
         photoCount      = result.0
@@ -318,6 +330,8 @@ class PhotoLibraryViewModel {
         favoritesCount  = result.4
         duplicateGroups = result.5
         yearlyStorage   = result.6
+        largestPhotos   = result.7
+        largestVideos   = result.8
         statsLoading    = false
     }
 
