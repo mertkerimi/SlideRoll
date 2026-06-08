@@ -8,10 +8,11 @@ struct ReviewView: View {
 
     @State private var pendingIDs: [String] = []
     @State private var currentIndex: Int = 0
-    @State private var lastDecision: (id: String, decision: PhotoDecision)? = nil
+    @State private var decisionHistory: [(id: String, decision: PhotoDecision)] = []
     @State private var cardID = UUID()
     @State private var showTrash = false
     @State private var groupTotalBytes: Int64 = 0
+    @State private var cachedDeletedBytes: Int64 = 0
 
     private var currentGroup: MonthGroup? {
         vm.monthGroups.first(where: { $0.id == group.id })
@@ -68,18 +69,7 @@ struct ReviewView: View {
     }
 
     private var navBar: some View {
-        HStack {
-            Button { dismiss() } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Theme.textSecondary)
-                    .frame(width: 36, height: 36)
-                    .background(Theme.surface, in: Circle())
-                    .overlay(Circle().stroke(Theme.border, lineWidth: 1))
-            }
-
-            Spacer()
-
+        ZStack {
             VStack(spacing: 3) {
                 Text(lm.s.monthTitle(from: group.id))
                     .font(.system(size: 15, weight: .bold))
@@ -88,15 +78,23 @@ struct ReviewView: View {
                     .font(.system(size: 12, weight: .medium, design: .rounded))
                     .foregroundStyle(Theme.textSecondary)
             }
-
-            // Symmetric spacer so title stays centered
-            Color.clear.frame(width: 36, height: 36)
+            HStack {
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Theme.textSecondary)
+                        .frame(width: 36, height: 36)
+                        .background(Theme.surface, in: Circle())
+                        .overlay(Circle().stroke(Theme.border, lineWidth: 1))
+                }
+                Spacer()
+            }
         }
         .padding(.horizontal, 20)
     }
 
     private var progressStrip: some View {
-        let deletedBytes = vm.toDeleteBytes(in: group.id)
+        let deletedBytes = cachedDeletedBytes
         let savings = groupTotalBytes > 0 ? Double(deletedBytes) / Double(groupTotalBytes) : 0
 
         return VStack(spacing: 6) {
@@ -176,17 +174,22 @@ struct ReviewView: View {
                     .scaleEffect(0.93).offset(y: 11)
                     .shadow(color: .black.opacity(0.3), radius: 12, y: 5)
             }
-            PhotoCardView(photoID: pendingIDs[currentIndex]) { handleSwipe($0) }
-                .id(cardID)
-                .environment(vm)
-                .environment(lm)
+            PhotoCardView(
+                photoID: pendingIDs[currentIndex],
+                onSwipe: { handleSwipe($0) },
+                onTapUndo: { undoLast() }
+            )
+            .id(cardID)
+            .environment(vm)
+            .environment(lm)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var statsAndDock: some View {
         let s = lm.s
-        return VStack(spacing: 12) {
+        return VStack(spacing: 10) {
+            // Compact counter row
             HStack(spacing: 0) {
                 counterCell(count: keepCount, label: s.keptCounter, color: Theme.green)
                 counterDivider
@@ -194,27 +197,32 @@ struct ReviewView: View {
                 counterDivider
                 counterCell(count: skipCount, label: s.skippedCounter, color: Theme.orange)
             }
-            .padding(.vertical, 14)
+            .padding(.vertical, 8)
             .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(Theme.surface)
-                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Theme.border, lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Theme.border, lineWidth: 1))
             )
 
             HStack(spacing: 10) {
-                actionButton(icon: "arrow.uturn.backward", color: Theme.textSecondary,
-                             bg: Theme.surface, border: true) {
-                    if let last = lastDecision { undoLast(last) }
-                }
-                .opacity(lastDecision == nil ? 0.3 : 1)
-                .disabled(lastDecision == nil)
-                .animation(.easeInOut(duration: 0.2), value: lastDecision?.id)
-
-                actionButton(icon: "xmark", color: Theme.red,
-                             bg: Theme.red.opacity(0.15), border: false) {
-                    handleSwipe(.delete)
+                // Skip — leftmost
+                actionButton(icon: "clock", color: Theme.orange,
+                             bg: Theme.orange.opacity(0.15), border: false) {
+                    handleSwipe(.skip)
                 }
 
+                // Delete — equal center
+                Button { handleSwipe(.delete) } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 60)
+                        .background(Theme.redGradient, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .shadow(color: Theme.red.opacity(0.35), radius: 14, y: 6)
+                }
+
+                // Keep — equal center
                 Button { handleSwipe(.keep) } label: {
                     Image(systemName: "checkmark")
                         .font(.system(size: 22, weight: .bold))
@@ -225,12 +233,7 @@ struct ReviewView: View {
                         .shadow(color: Theme.green.opacity(0.4), radius: 14, y: 6)
                 }
 
-                actionButton(icon: "clock", color: Theme.orange,
-                             bg: Theme.orange.opacity(0.15), border: false) {
-                    handleSwipe(.skip)
-                }
-
-                // Trash button with badge
+                // Trash — rightmost
                 ZStack(alignment: .topTrailing) {
                     actionButton(icon: "trash", color: Theme.textSecondary,
                                  bg: Theme.surface, border: true) {
@@ -251,18 +254,18 @@ struct ReviewView: View {
     }
 
     private var counterDivider: some View {
-        Rectangle().fill(Theme.border).frame(width: 1, height: 32)
+        Rectangle().fill(Theme.border).frame(width: 1, height: 22)
     }
 
     private func counterCell(count: Int, label: String, color: Color) -> some View {
-        VStack(spacing: 4) {
+        HStack(spacing: 5) {
             Text("\(count)")
-                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .font(.system(size: 15, weight: .bold, design: .rounded))
                 .foregroundStyle(count > 0 ? color : Theme.textTertiary)
                 .contentTransition(.numericText())
                 .animation(.spring(response: 0.3, dampingFraction: 0.7), value: count)
             Text(label)
-                .font(.system(size: 10, weight: .medium))
+                .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(Theme.textTertiary)
         }
         .frame(maxWidth: .infinity)
@@ -360,19 +363,30 @@ struct ReviewView: View {
         case .none:   return
         }
         vm.applyDecision(decision, to: photoID, in: group.id)
-        lastDecision = (id: photoID, decision: decision)
+        decisionHistory.append((id: photoID, decision: decision))
         vm.startCaching(ids: Array(pendingIDs.dropFirst(currentIndex + 1).prefix(8)),
                         targetSize: CGSize(width: 700, height: 900))
         withAnimation(.easeInOut(duration: 0.1)) { currentIndex += 1 }
         cardID = UUID()
+        refreshDeletedBytes()
     }
 
-    private func undoLast(_ last: (id: String, decision: PhotoDecision)) {
+    private func undoLast() {
+        guard !decisionHistory.isEmpty, currentIndex > 0 else { return }
+        let last = decisionHistory.removeLast()
         vm.undoDecision(for: last.id, in: group.id)
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-            if currentIndex > 0 { currentIndex -= 1 }
+            currentIndex -= 1
         }
-        lastDecision = nil
         cardID = UUID()
+        refreshDeletedBytes()
+    }
+
+    private func refreshDeletedBytes() {
+        let groupID = group.id
+        Task.detached(priority: .utility) {
+            let bytes = await vm.toDeleteBytes(in: groupID)
+            await MainActor.run { cachedDeletedBytes = bytes }
+        }
     }
 }

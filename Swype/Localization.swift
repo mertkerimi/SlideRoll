@@ -166,7 +166,8 @@ struct Strings {
     var statFavorites: String   { pick("Favori",     "Favorites",  "Favoriten") }
     var statTrashSize: String   { pick("Silinecek Alan", "Trash Size", "Papierkorb") }
     var statDuplicates: String  { pick("Olası Kopya","Duplicates", "Duplikate") }
-    var statByYear: String      { pick("Yıllara Göre Depolama", "Storage by Year", "Speicher nach Jahr") }
+    var statByYear: String          { pick("Yıllara Göre Depolama", "Storage by Year", "Speicher nach Jahr") }
+    var statLargestPhotos: String   { pick("En Büyük Fotoğraflar", "Largest Photos", "Größte Fotos") }
 
     // MARK: - Duplicates
     var dupTitle: String        { pick("Olası Kopyalar",    "Potential Duplicates", "Mögliche Duplikate") }
