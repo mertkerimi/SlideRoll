@@ -11,6 +11,13 @@ class PhotoLibraryViewModel {
     var isLoading = false
     var toDeleteIDs: [String] = []
 
+    // Library stats
+    var photoCount: Int = 0
+    var videoCount: Int = 0
+    var photoBytes: Int64 = 0
+    var videoBytes: Int64 = 0
+    var statsLoading = false
+
     let imageManager = PHCachingImageManager()
     private let persistenceKey = "PhotoCleanerDecisions"
     private var allAssets: [String: PHAsset] = [:]
@@ -119,6 +126,22 @@ class PhotoLibraryViewModel {
         toDeleteIDs.removeAll { $0 == photoID }
     }
 
+    // Applies a decision without knowing the group — searches all groups
+    func applyDecisionGlobal(_ decision: PhotoDecision, to photoID: String) {
+        guard let idx = monthGroups.firstIndex(where: { $0.photoIDs.contains(photoID) }) else { return }
+        applyDecision(decision, to: photoID, in: monthGroups[idx].id)
+    }
+
+    func undoDecisionGlobal(for photoID: String) {
+        guard let idx = monthGroups.firstIndex(where: { $0.photoIDs.contains(photoID) }) else { return }
+        undoDecision(for: photoID, in: monthGroups[idx].id)
+    }
+
+    // All undecided photo IDs across every month, shuffled
+    var allPendingIDs: [String] {
+        monthGroups.flatMap { $0.pendingIDs }.shuffled()
+    }
+
     func removeFromTrash(photoID: String) {
         toDeleteIDs.removeAll { $0 == photoID }
         for idx in monthGroups.indices {
@@ -168,6 +191,38 @@ class PhotoLibraryViewModel {
                 }
             }
         }
+    }
+
+    func loadLibraryStats() async {
+        guard !statsLoading else { return }
+        statsLoading = true
+
+        let result = await Task.detached(priority: .userInitiated) {
+            let photoFetch = PHAsset.fetchAssets(with: .image, options: nil)
+            let videoFetch = PHAsset.fetchAssets(with: .video, options: nil)
+
+            var pBytes: Int64 = 0
+            var vBytes: Int64 = 0
+
+            photoFetch.enumerateObjects { asset, _, _ in
+                for resource in PHAssetResource.assetResources(for: asset) {
+                    pBytes += (resource.value(forKey: "fileSize") as? Int64) ?? 0
+                }
+            }
+            videoFetch.enumerateObjects { asset, _, _ in
+                for resource in PHAssetResource.assetResources(for: asset) {
+                    vBytes += (resource.value(forKey: "fileSize") as? Int64) ?? 0
+                }
+            }
+
+            return (photoFetch.count, videoFetch.count, pBytes, vBytes)
+        }.value
+
+        photoCount = result.0
+        videoCount = result.1
+        photoBytes = result.2
+        videoBytes = result.3
+        statsLoading = false
     }
 
     func startCaching(ids: [String], targetSize: CGSize) {

@@ -34,7 +34,8 @@ struct Strings {
     var done: String         { pick("Tamam",  "Done",   "Fertig") }
     var error: String        { pick("Hata",   "Error",  "Fehler") }
     var settings: String     { pick("Ayarlar","Settings","Einstellungen") }
-    var languageLabel: String { pick("Dil",    "Language","Sprache") }
+    var languageLabel: String { pick("Dil",       "Language", "Sprache") }
+    var themeColor: String    { pick("Renk Teması","Color Theme","Farbdesign") }
 
     // MARK: - Permission
     var appTagline: String { pick(
@@ -54,7 +55,12 @@ struct Strings {
     var reviewedLabel: String   { pick("İncelendi","Reviewed","Überprüft") }
     var pendingLabel: String    { pick("Bekliyor", "Pending", "Ausstehend") }
     var completedLabel: String  { pick("Tamamlandı","Completed","Abgeschlossen") }
-    var tapToDelete: String     { pick("Silmek için dokun", "Tap to delete", "Tippen zum Löschen") }
+    var tapToDelete: String   { pick("Silmek için dokun", "Tap to delete", "Tippen zum Löschen") }
+    var actionStart: String    { pick("Başla",     "Start",     "Starten") }
+    var actionContinue: String { pick("Devam Et",  "Continue",  "Weiter") }
+    var shuffleTitle: String   { pick("Karışık İnceleme", "Shuffle Review", "Zufällige Überprüfung") }
+    var shuffleCompleted: String { pick("Hepsi tamamlandı!", "All done!", "Alles erledigt!") }
+    var shuffleHint: String    { pick("Tüm fotoğrafları karışık incele", "Review all photos in shuffle mode", "Alle Fotos zufällig überprüfen") }
 
     func photosSelected(_ n: Int) -> String { pick(
         "\(n) fotoğraf seçildi",
@@ -137,6 +143,29 @@ struct Strings {
         "\(n) fotoğraf cihazınızdan kalıcı olarak silinecek.",
         "\(n) photos will be permanently deleted from your device.",
         "\(n) Fotos werden dauerhaft von Ihrem Gerät gelöscht."
+    )}
+
+    // MARK: - Tab bar
+    var tabHome: String     { pick("Ana Sayfa", "Home",     "Startseite") }
+    var tabStats: String    { pick("Kütüphane", "Library",  "Mediathek") }
+    var tabSettings: String { pick("Ayarlar",   "Settings", "Einstellungen") }
+
+    // MARK: - Stats
+    var statTitle: String       { pick("Kütüphane",       "Library",        "Mediathek") }
+    var statPhotos: String      { pick("Fotoğraflar",     "Photos",         "Fotos") }
+    var statVideos: String      { pick("Videolar",        "Videos",         "Videos") }
+    var statStorage: String     { pick("Depolama",        "Storage",        "Speicher") }
+    var statCalculating: String     { pick("Hesaplanıyor…",   "Calculating…",   "Wird berechnet…") }
+    var statCalculatingHint: String { pick("Kütüphane boyutu hesaplanıyor,\n lütfen bekleyiniz.", "Calculating library size,\nplease wait a moment.", "Bibliotheksgröße wird berechnet,\nbitte warten.") }
+    var statProgress: String        { pick("İlerleme",        "Progress",        "Fortschritt") }
+    var statReviewed: String    { pick("İncelendi",       "Reviewed",       "Überprüft") }
+    var statKept: String        { pick("Tutuldu",         "Kept",           "Behalten") }
+    var statToDelete: String    { pick("Silinecek",       "To Delete",      "Zu löschen") }
+
+    func statItemCount(_ n: Int) -> String { pick(
+        "\(n) öğe",
+        "\(n) items",
+        "\(n) Elemente"
     )}
 
     // MARK: - Date formatting

@@ -8,17 +8,10 @@ struct ContentView: View {
     var body: some View {
         switch vm.authStatus {
         case .authorized, .limited:
-            MonthListView()
+            RootView()
         case .denied, .restricted:
             PermissionView(onRequest: {})
                 .environment(lm)
-                .overlay(alignment: .top) {
-                    Text(lm.s.allowInSettings)
-                        .multilineTextAlignment(.center)
-                        .font(.callout)
-                        .foregroundColor(.secondary)
-                        .padding()
-                }
         default:
             PermissionView {
                 await vm.requestPermission()
