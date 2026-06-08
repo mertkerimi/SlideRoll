@@ -3,6 +3,7 @@ import SwiftUI
 struct ReviewView: View {
     let group: MonthGroup
     @Environment(PhotoLibraryViewModel.self) var vm
+    @Environment(LanguageManager.self) var lm
     @Environment(\.dismiss) var dismiss
 
     @State private var pendingIDs: [String] = []
@@ -35,12 +36,10 @@ struct ReviewView: View {
         }
         .animation(.easeInOut(duration: 0.3), value: isFinished)
         .sheet(isPresented: $showTrash) {
-            TrashView().environment(vm)
+            TrashView().environment(vm).environment(lm)
         }
         .onAppear { setupPending() }
     }
-
-    // MARK: Background Glows
 
     private var backgroundGlows: some View {
         ZStack {
@@ -55,8 +54,6 @@ struct ReviewView: View {
         }
     }
 
-    // MARK: Main Review
-
     private var reviewContent: some View {
         VStack(spacing: 0) {
             navBar.padding(.top, 24)
@@ -65,8 +62,6 @@ struct ReviewView: View {
             statsAndDock.padding(.horizontal, 20).padding(.top, 14).padding(.bottom, 28)
         }
     }
-
-    // MARK: Nav Bar
 
     private var navBar: some View {
         HStack {
@@ -82,7 +77,7 @@ struct ReviewView: View {
             Spacer()
 
             VStack(spacing: 3) {
-                Text(group.title)
+                Text(lm.s.monthTitle(from: group.id))
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(Theme.textPrimary)
                 Text("\(currentIndex + 1) / \(pendingIDs.count)")
@@ -115,8 +110,6 @@ struct ReviewView: View {
         .padding(.horizontal, 20)
     }
 
-    // MARK: Progress Strip
-
     private var progressStrip: some View {
         VStack(spacing: 8) {
             GeometryReader { geo in
@@ -131,7 +124,7 @@ struct ReviewView: View {
             .frame(height: 4)
 
             HStack {
-                Text(String(format: "%0.f%% tamamlandı", (currentGroup?.progress ?? 0) * 100))
+                Text(lm.s.percentCompleted((currentGroup?.progress ?? 0) * 100))
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(Theme.textTertiary)
                 Spacer()
@@ -141,8 +134,6 @@ struct ReviewView: View {
             }
         }
     }
-
-    // MARK: Card Deck
 
     private var cardDeck: some View {
         ZStack {
@@ -161,21 +152,20 @@ struct ReviewView: View {
             PhotoCardView(photoID: pendingIDs[currentIndex]) { handleSwipe($0) }
                 .id(cardID)
                 .environment(vm)
+                .environment(lm)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // MARK: Stats + Dock
-
     private var statsAndDock: some View {
-        VStack(spacing: 12) {
-            // Counter strip
+        let s = lm.s
+        return VStack(spacing: 12) {
             HStack(spacing: 0) {
-                counterCell(count: keepCount, label: "Tutulan", color: Theme.green)
+                counterCell(count: keepCount, label: s.keptCounter, color: Theme.green)
                 counterDivider
-                counterCell(count: deleteCount, label: "Silinecek", color: Theme.red)
+                counterCell(count: deleteCount, label: s.toDeleteCounter, color: Theme.red)
                 counterDivider
-                counterCell(count: skipCount, label: "Atlanan", color: Theme.orange)
+                counterCell(count: skipCount, label: s.skippedCounter, color: Theme.orange)
             }
             .padding(.vertical, 14)
             .background(
@@ -184,9 +174,7 @@ struct ReviewView: View {
                     .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Theme.border, lineWidth: 1))
             )
 
-            // Action dock
             HStack(spacing: 10) {
-                // Undo
                 actionButton(icon: "arrow.uturn.backward", color: Theme.textSecondary,
                              bg: Theme.surface, border: true) {
                     if let last = lastDecision { undoLast(last) }
@@ -195,13 +183,11 @@ struct ReviewView: View {
                 .disabled(lastDecision == nil)
                 .animation(.easeInOut(duration: 0.2), value: lastDecision?.id)
 
-                // Delete
                 actionButton(icon: "xmark", color: Theme.red,
                              bg: Theme.red.opacity(0.15), border: false) {
                     handleSwipe(.delete)
                 }
 
-                // Keep — largest
                 Button { handleSwipe(.keep) } label: {
                     Image(systemName: "checkmark")
                         .font(.system(size: 22, weight: .bold))
@@ -212,13 +198,11 @@ struct ReviewView: View {
                         .shadow(color: Theme.green.opacity(0.4), radius: 14, y: 6)
                 }
 
-                // Skip
                 actionButton(icon: "clock", color: Theme.orange,
                              bg: Theme.orange.opacity(0.15), border: false) {
                     handleSwipe(.skip)
                 }
 
-                // Trash shortcut
                 actionButton(icon: "trash", color: Theme.textSecondary,
                              bg: Theme.surface, border: true) {
                     showTrash = true
@@ -228,9 +212,7 @@ struct ReviewView: View {
     }
 
     private var counterDivider: some View {
-        Rectangle()
-            .fill(Theme.border)
-            .frame(width: 1, height: 32)
+        Rectangle().fill(Theme.border).frame(width: 1, height: 32)
     }
 
     private func counterCell(count: Int, label: String, color: Color) -> some View {
@@ -260,10 +242,9 @@ struct ReviewView: View {
         }
     }
 
-    // MARK: Completed
-
     private var completedView: some View {
-        VStack(spacing: 0) {
+        let s = lm.s
+        return VStack(spacing: 0) {
             Spacer()
             VStack(spacing: 24) {
                 ZStack {
@@ -273,21 +254,20 @@ struct ReviewView: View {
                         .foregroundStyle(Theme.green)
                 }
                 VStack(spacing: 10) {
-                    Text("Bu ay tamamlandı!")
+                    Text(s.monthCompleted)
                         .font(.system(size: 26, weight: .bold))
                         .foregroundStyle(Theme.textPrimary)
-                    Text("\(currentGroup?.reviewed ?? 0) fotoğraf incelendi")
+                    Text(s.photosReviewedCount(currentGroup?.reviewed ?? 0))
                         .font(.system(size: 15))
                         .foregroundStyle(Theme.textSecondary)
                 }
 
-                // Mini summary
                 HStack(spacing: 0) {
-                    counterCell(count: keepCount, label: "Tutuldu", color: Theme.green)
+                    counterCell(count: keepCount, label: s.keptDone, color: Theme.green)
                     counterDivider
-                    counterCell(count: deleteCount, label: "Silinecek", color: Theme.red)
+                    counterCell(count: deleteCount, label: s.toDeleteStat, color: Theme.red)
                     counterDivider
-                    counterCell(count: skipCount, label: "Atlandı", color: Theme.orange)
+                    counterCell(count: skipCount, label: s.skippedDone, color: Theme.orange)
                 }
                 .padding(.vertical, 16)
                 .background(
@@ -303,7 +283,7 @@ struct ReviewView: View {
                     Button { showTrash = true } label: {
                         HStack(spacing: 10) {
                             Image(systemName: "trash.fill")
-                            Text("\(vm.toDeleteIDs.count) fotoğrafı kalıcı sil")
+                            Text(s.permanentlyDelete(vm.toDeleteIDs.count))
                                 .font(.system(size: 16, weight: .bold))
                         }
                         .foregroundStyle(.white)
@@ -313,7 +293,7 @@ struct ReviewView: View {
                         .shadow(color: Theme.red.opacity(0.4), radius: 16, y: 8)
                     }
                 }
-                Button("Kapat") { dismiss() }
+                Button(s.close) { dismiss() }
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(Theme.textSecondary)
                     .padding(.vertical, 12)
@@ -322,8 +302,6 @@ struct ReviewView: View {
             .padding(.bottom, 40)
         }
     }
-
-    // MARK: Logic
 
     private func setupPending() {
         guard let g = currentGroup else { return }

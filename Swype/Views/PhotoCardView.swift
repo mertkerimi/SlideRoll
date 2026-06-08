@@ -9,6 +9,7 @@ struct PhotoCardView: View {
     let onSwipe: (SwipeDirection) -> Void
 
     @Environment(PhotoLibraryViewModel.self) var vm
+    @Environment(LanguageManager.self) var lm
     @State private var offset: CGSize = .zero
     @State private var image: UIImage?
     @State private var isDragging = false
@@ -102,7 +103,7 @@ struct PhotoCardView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "checkmark")
                         .font(.system(size: 14, weight: .black))
-                    Text("TUT")
+                    Text(lm.s.keepBadge)
                         .font(.system(size: 15, weight: .black, design: .rounded))
                         .tracking(1.5)
                 }
@@ -129,7 +130,7 @@ struct PhotoCardView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "trash.fill")
                         .font(.system(size: 14, weight: .black))
-                    Text("SİL")
+                    Text(lm.s.deleteBadge)
                         .font(.system(size: 15, weight: .black, design: .rounded))
                         .tracking(1.5)
                 }
@@ -153,7 +154,7 @@ struct PhotoCardView: View {
             HStack(spacing: 6) {
                 Image(systemName: "clock.fill")
                     .font(.system(size: 14, weight: .black))
-                Text("SONRA")
+                Text(lm.s.laterBadge)
                     .font(.system(size: 15, weight: .black, design: .rounded))
                     .tracking(1.5)
             }
