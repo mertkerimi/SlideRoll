@@ -7,13 +7,13 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		E0BE94192FD06C2F002A1CC6 /* PhotoCleaner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PhotoCleaner.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E0BE94192FD06C2F002A1CC6 /* Swype.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Swype.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		E0BE941B2FD06C2F002A1CC6 /* PhotoCleaner */ = {
+		E0BE941B2FD06C2F002A1CC6 /* Swype */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = PhotoCleaner;
+			path = Swype;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -32,7 +32,7 @@
 		E0BE94102FD06C2F002A1CC6 = {
 			isa = PBXGroup;
 			children = (
-				E0BE941B2FD06C2F002A1CC6 /* PhotoCleaner */,
+				E0BE941B2FD06C2F002A1CC6 /* Swype */,
 				E0BE941A2FD06C2F002A1CC6 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -40,7 +40,7 @@
 		E0BE941A2FD06C2F002A1CC6 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				E0BE94192FD06C2F002A1CC6 /* PhotoCleaner.app */,
+				E0BE94192FD06C2F002A1CC6 /* Swype.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,9 +48,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		E0BE94182FD06C2F002A1CC6 /* PhotoCleaner */ = {
+		E0BE94182FD06C2F002A1CC6 /* Swype */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = E0BE94242FD06C30002A1CC6 /* Build configuration list for PBXNativeTarget "PhotoCleaner" */;
+			buildConfigurationList = E0BE94242FD06C30002A1CC6 /* Build configuration list for PBXNativeTarget "Swype" */;
 			buildPhases = (
 				E0BE94152FD06C2F002A1CC6 /* Sources */,
 				E0BE94162FD06C2F002A1CC6 /* Frameworks */,
@@ -61,13 +61,13 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				E0BE941B2FD06C2F002A1CC6 /* PhotoCleaner */,
+				E0BE941B2FD06C2F002A1CC6 /* Swype */,
 			);
-			name = PhotoCleaner;
+			name = Swype;
 			packageProductDependencies = (
 			);
 			productName = PhotoCleaner;
-			productReference = E0BE94192FD06C2F002A1CC6 /* PhotoCleaner.app */;
+			productReference = E0BE94192FD06C2F002A1CC6 /* Swype.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -85,7 +85,7 @@
 					};
 				};
 			};
-			buildConfigurationList = E0BE94142FD06C2F002A1CC6 /* Build configuration list for PBXProject "PhotoCleaner" */;
+			buildConfigurationList = E0BE94142FD06C2F002A1CC6 /* Build configuration list for PBXProject "Swype" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -99,7 +99,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				E0BE94182FD06C2F002A1CC6 /* PhotoCleaner */,
+				E0BE94182FD06C2F002A1CC6 /* Swype */,
 			);
 		};
 /* End PBXProject section */
@@ -325,7 +325,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		E0BE94142FD06C2F002A1CC6 /* Build configuration list for PBXProject "PhotoCleaner" */ = {
+		E0BE94142FD06C2F002A1CC6 /* Build configuration list for PBXProject "Swype" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				E0BE94222FD06C30002A1CC6 /* Debug */,
@@ -334,7 +334,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		E0BE94242FD06C30002A1CC6 /* Build configuration list for PBXNativeTarget "PhotoCleaner" */ = {
+		E0BE94242FD06C30002A1CC6 /* Build configuration list for PBXNativeTarget "Swype" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				E0BE94252FD06C30002A1CC6 /* Debug */,
