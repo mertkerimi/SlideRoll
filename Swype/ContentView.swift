@@ -3,6 +3,7 @@ import Photos
 
 struct ContentView: View {
     @Environment(PhotoLibraryViewModel.self) var vm
+    @Environment(LanguageManager.self) var lm
 
     var body: some View {
         switch vm.authStatus {
@@ -10,8 +11,9 @@ struct ContentView: View {
             MonthListView()
         case .denied, .restricted:
             PermissionView(onRequest: {})
+                .environment(lm)
                 .overlay(alignment: .top) {
-                    Text("Fotoğraflara erişim reddedildi. Ayarlardan izin verin.")
+                    Text(lm.s.allowInSettings)
                         .multilineTextAlignment(.center)
                         .font(.callout)
                         .foregroundColor(.secondary)
@@ -21,6 +23,7 @@ struct ContentView: View {
             PermissionView {
                 await vm.requestPermission()
             }
+            .environment(lm)
         }
     }
 }

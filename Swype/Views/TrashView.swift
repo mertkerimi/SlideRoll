@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TrashView: View {
     @Environment(PhotoLibraryViewModel.self) var vm
+    @Environment(LanguageManager.self) var lm
     @Environment(\.dismiss) var dismiss
 
     @State private var showConfirm = false
@@ -15,6 +16,7 @@ struct TrashView: View {
     ]
 
     var body: some View {
+        let s = lm.s
         NavigationStack {
         ZStack(alignment: .bottom) {
             Theme.bg.ignoresSafeArea()
@@ -31,38 +33,36 @@ struct TrashView: View {
         .toolbar {
             ToolbarItem(placement: .principal) {
                 VStack(spacing: 2) {
-                    Text("Silinecekler")
+                    Text(s.trashTitle)
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(Theme.textPrimary)
-                    Text("\(vm.toDeleteIDs.count) fotoğraf")
+                    Text(s.photosCount(vm.toDeleteIDs.count))
                         .font(.system(size: 12))
                         .foregroundStyle(Theme.textSecondary)
                 }
             }
             ToolbarItem(placement: .navigationBarLeading) {
-                Button("Kapat") { dismiss() }
+                Button(s.close) { dismiss() }
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(Theme.textSecondary)
             }
         }
-        .confirmationDialog("Bu işlem geri alınamaz.", isPresented: $showConfirm, titleVisibility: .visible) {
-            Button("\(vm.toDeleteIDs.count) fotoğrafı kalıcı sil", role: .destructive) {
+        .confirmationDialog(s.cannotUndo, isPresented: $showConfirm, titleVisibility: .visible) {
+            Button(s.permanentlyDeleteN(vm.toDeleteIDs.count), role: .destructive) {
                 Task { await permanentDelete() }
             }
-            Button("İptal", role: .cancel) {}
+            Button(s.cancel, role: .cancel) {}
         } message: {
-            Text("\(vm.toDeleteIDs.count) fotoğraf cihazınızdan kalıcı olarak silinecek.")
+            Text(s.permanentlyDeleteMsg(vm.toDeleteIDs.count))
         }
-        .alert("Hata", isPresented: Binding(
+        .alert(s.error, isPresented: Binding(
             get: { deleteError != nil },
             set: { if !$0 { deleteError = nil } }
         )) {
-            Button("Tamam", role: .cancel) {}
+            Button(s.ok, role: .cancel) {}
         } message: { Text(deleteError ?? "") }
-        } // NavigationStack
+        }
     }
-
-    // MARK: Background
 
     private var backgroundGlows: some View {
         ZStack {
@@ -72,8 +72,6 @@ struct TrashView: View {
                 .offset(x: 100, y: -200)
         }
     }
-
-    // MARK: Grid
 
     private var scrollGrid: some View {
         ScrollView(showsIndicators: false) {
@@ -98,10 +96,9 @@ struct TrashView: View {
         }
     }
 
-    // MARK: Bottom Bar
-
     private var bottomBar: some View {
-        VStack(spacing: 0) {
+        let s = lm.s
+        return VStack(spacing: 0) {
             LinearGradient(
                 colors: [Theme.bg.opacity(0), Theme.bg],
                 startPoint: .top, endPoint: .bottom
@@ -114,13 +111,13 @@ struct TrashView: View {
                         if isDeleting {
                             HStack(spacing: 12) {
                                 ProgressView().tint(.white)
-                                Text("Siliniyor…").font(.system(size: 16, weight: .bold))
+                                Text(s.deleting).font(.system(size: 16, weight: .bold))
                             }
                         } else {
                             HStack(spacing: 10) {
                                 Image(systemName: "trash.fill")
                                     .font(.system(size: 16, weight: .bold))
-                                Text("\(vm.toDeleteIDs.count) Fotoğrafı Kalıcı Sil")
+                                Text(s.permanentlyDeleteButton(vm.toDeleteIDs.count))
                                     .font(.system(size: 16, weight: .bold))
                             }
                         }
@@ -133,7 +130,7 @@ struct TrashView: View {
                 }
                 .disabled(isDeleting)
 
-                Text("Bu işlem geri alınamaz")
+                Text(s.cannotUndoShort)
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.textTertiary)
             }
@@ -143,17 +140,16 @@ struct TrashView: View {
         }
     }
 
-    // MARK: Empty
-
     private var emptyView: some View {
-        VStack(spacing: 16) {
+        let s = lm.s
+        return VStack(spacing: 16) {
             Image(systemName: "trash.slash.fill")
                 .font(.system(size: 52))
                 .foregroundStyle(Theme.textTertiary)
-            Text("Silinecek Fotoğraf Yok")
+            Text(s.noPhotosToDelete)
                 .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(Theme.textPrimary)
-            Text("Sola kaydırdığınız fotoğraflar burada görünür.")
+            Text(s.swipeLeftHint)
                 .font(.system(size: 14))
                 .foregroundStyle(Theme.textSecondary)
                 .multilineTextAlignment(.center)

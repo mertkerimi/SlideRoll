@@ -4,14 +4,15 @@ import SwiftUI
 
 struct MonthListView: View {
     @Environment(PhotoLibraryViewModel.self) var vm
+    @Environment(LanguageManager.self) var lm
     @State private var showTrash = false
+    @State private var showSettings = false
 
     var body: some View {
         NavigationStack {
             ZStack(alignment: .bottom) {
                 Theme.bg.ignoresSafeArea()
 
-                // Background glows
                 backgroundGlows
 
                 Group {
@@ -34,7 +35,10 @@ struct MonthListView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { navHeader }
             .sheet(isPresented: $showTrash) {
-                TrashView().environment(vm)
+                TrashView().environment(vm).environment(lm)
+            }
+            .sheet(isPresented: $showSettings) {
+                SettingsView().environment(lm)
             }
         }
     }
@@ -59,14 +63,27 @@ struct MonthListView: View {
     // MARK: Nav
 
     private var navHeader: some ToolbarContent {
-        ToolbarItem(placement: .principal) {
-            HStack(spacing: 8) {
-                Image(systemName: "photo.stack.fill")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(Theme.accentGradient)
-                Text("Swype")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundStyle(Theme.textPrimary)
+        Group {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button { showSettings = true } label: {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(Theme.textSecondary)
+                        .frame(width: 34, height: 34)
+                        .background(Theme.surface, in: Circle())
+                        .overlay(Circle().stroke(Theme.border, lineWidth: 1))
+                }
+            }
+
+            ToolbarItem(placement: .principal) {
+                HStack(spacing: 8) {
+                    Image(systemName: "photo.stack.fill")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(Theme.accentGradient)
+                    Text("Swype")
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundStyle(Theme.textPrimary)
+                }
             }
         }
     }
@@ -76,7 +93,6 @@ struct MonthListView: View {
     private var yearList: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
-                // Summary header
                 summaryHeader
                     .padding(.horizontal, 24)
                     .padding(.top, 8)
@@ -85,9 +101,9 @@ struct MonthListView: View {
                 LazyVStack(spacing: 14) {
                     ForEach(vm.yearGroups) { year in
                         NavigationLink(destination:
-                            MonthsForYearView(year: year).environment(vm)
+                            MonthsForYearView(year: year).environment(vm).environment(lm)
                         ) {
-                            YearCard(year: year)
+                            YearCard(year: year).environment(lm)
                         }
                         .buttonStyle(.plain)
                     }
@@ -101,12 +117,13 @@ struct MonthListView: View {
     // MARK: Summary Header
 
     private var summaryHeader: some View {
-        let totalPhotos = vm.yearGroups.reduce(0) { $0 + $1.total }
+        let totalPhotos   = vm.yearGroups.reduce(0) { $0 + $1.total }
         let totalReviewed = vm.yearGroups.reduce(0) { $0 + $1.reviewed }
         let progress = totalPhotos > 0 ? Double(totalReviewed) / Double(totalPhotos) : 0
+        let s = lm.s
 
         return VStack(alignment: .leading, spacing: 16) {
-            Text("Genel İlerleme")
+            Text(s.overallProgress)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Theme.textSecondary)
                 .tracking(0.8)
@@ -121,7 +138,6 @@ struct MonthListView: View {
                     .padding(.bottom, 6)
             }
 
-            // Progress bar
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 4)
@@ -136,9 +152,9 @@ struct MonthListView: View {
             .frame(height: 6)
 
             HStack(spacing: 20) {
-                summaryChip(value: "\(vm.toDeleteIDs.count)", label: "Silinecek", color: Theme.red)
-                summaryChip(value: String(format: "%0.f%%", progress * 100), label: "Tamamlandı", color: Theme.green)
-                summaryChip(value: "\(vm.yearGroups.count)", label: "Yıl", color: Theme.accent)
+                summaryChip(value: "\(vm.toDeleteIDs.count)", label: s.toDeleteStat, color: Theme.red)
+                summaryChip(value: String(format: "%0.f%%", progress * 100), label: s.completedLabel, color: Theme.green)
+                summaryChip(value: "\(vm.yearGroups.count)", label: s.yearLabel, color: Theme.accent)
             }
         }
         .padding(20)
@@ -174,10 +190,10 @@ struct MonthListView: View {
                         .foregroundStyle(Theme.red)
                 }
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("\(vm.toDeleteIDs.count) fotoğraf seçildi")
+                    Text(lm.s.photosSelected(vm.toDeleteIDs.count))
                         .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(Theme.textPrimary)
-                    Text("Silmek için dokun")
+                    Text(lm.s.tapToDelete)
                         .font(.system(size: 12, weight: .regular))
                         .foregroundStyle(Theme.textSecondary)
                 }
@@ -208,7 +224,7 @@ struct MonthListView: View {
             ProgressView()
                 .tint(Theme.accent)
                 .scaleEffect(1.4)
-            Text("Fotoğraflar yükleniyor…")
+            Text(lm.s.loadingPhotos)
                 .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(Theme.textSecondary)
         }
@@ -220,7 +236,7 @@ struct MonthListView: View {
             Image(systemName: "photo.on.rectangle.angled")
                 .font(.system(size: 52))
                 .foregroundStyle(Theme.textTertiary)
-            Text("Fotoğraf Bulunamadı")
+            Text(lm.s.noPhotosFound)
                 .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(Theme.textPrimary)
         }
@@ -232,33 +248,33 @@ struct MonthListView: View {
 
 struct YearCard: View {
     let year: YearGroup
+    @Environment(LanguageManager.self) var lm
     @State private var appeared = false
 
     var body: some View {
+        let s = lm.s
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 5) {
                     Text(year.title)
                         .font(.system(size: 26, weight: .bold, design: .rounded))
                         .foregroundStyle(Theme.textPrimary)
-                    Text("\(year.months.count) ay · \(year.total) fotoğraf")
+                    Text(s.monthsAndPhotos(months: year.months.count, photos: year.total))
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Theme.textSecondary)
                 }
                 Spacer()
-                percentBadge
+                percentBadge(s: s)
             }
 
-            // Stats row
             HStack(spacing: 0) {
-                statBlock(value: "\(year.reviewed)", label: "İncelendi", color: Theme.green)
+                statBlock(value: "\(year.reviewed)", label: s.reviewedLabel, color: Theme.green)
                 Divider().background(Theme.border).frame(height: 32).padding(.horizontal, 12)
-                statBlock(value: "\(year.total - year.reviewed)", label: "Bekliyor", color: Theme.orange)
+                statBlock(value: "\(year.total - year.reviewed)", label: s.pendingLabel, color: Theme.orange)
                 Divider().background(Theme.border).frame(height: 32).padding(.horizontal, 12)
-                statBlock(value: "\(year.months.count)", label: "Ay", color: Theme.accent)
+                statBlock(value: "\(year.months.count)", label: s.monthLabel, color: Theme.accent)
             }
 
-            // Progress bar
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule().fill(Theme.surfaceHigh).frame(height: 5)
@@ -284,13 +300,13 @@ struct YearCard: View {
         .onDisappear { appeared = false }
     }
 
-    private var percentBadge: some View {
+    private func percentBadge(s: Strings) -> some View {
         Group {
             if year.isCompleted {
                 HStack(spacing: 5) {
                     Image(systemName: "checkmark")
                         .font(.system(size: 10, weight: .black))
-                    Text("Tamam")
+                    Text(s.done)
                         .font(.system(size: 12, weight: .bold))
                 }
                 .foregroundStyle(.black)
@@ -331,8 +347,10 @@ struct YearCard: View {
 struct MonthsForYearView: View {
     let year: YearGroup
     @Environment(PhotoLibraryViewModel.self) var vm
+    @Environment(LanguageManager.self) var lm
     @State private var selectedGroup: MonthGroup?
     @State private var showTrash = false
+    @State private var showSettings = false
 
     private var currentYear: YearGroup? {
         vm.yearGroups.first(where: { $0.id == year.id })
@@ -345,7 +363,7 @@ struct MonthsForYearView: View {
             ScrollView(showsIndicators: false) {
                 LazyVStack(spacing: 10) {
                     ForEach(currentYear?.months ?? year.months) { group in
-                        MonthCard(group: group)
+                        MonthCard(group: group).environment(lm)
                             .onTapGesture { selectedGroup = group }
                     }
                 }
@@ -363,11 +381,26 @@ struct MonthsForYearView: View {
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: vm.toDeleteIDs.isEmpty)
         .navigationTitle(year.title)
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button { showSettings = true } label: {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(Theme.textSecondary)
+                        .frame(width: 34, height: 34)
+                        .background(Theme.surface, in: Circle())
+                        .overlay(Circle().stroke(Theme.border, lineWidth: 1))
+                }
+            }
+        }
+        .sheet(isPresented: $showSettings) {
+            SettingsView().environment(lm)
+        }
         .sheet(item: $selectedGroup) { group in
-            ReviewView(group: group).environment(vm)
+            ReviewView(group: group).environment(vm).environment(lm)
         }
         .sheet(isPresented: $showTrash) {
-            TrashView().environment(vm)
+            TrashView().environment(vm).environment(lm)
         }
     }
 
@@ -383,10 +416,10 @@ struct MonthsForYearView: View {
                         .foregroundStyle(Theme.red)
                 }
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("\(vm.toDeleteIDs.count) fotoğraf seçildi")
+                    Text(lm.s.photosSelected(vm.toDeleteIDs.count))
                         .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(Theme.textPrimary)
-                    Text("Silmek için dokun")
+                    Text(lm.s.tapToDelete)
                         .font(.system(size: 12))
                         .foregroundStyle(Theme.textSecondary)
                 }
@@ -415,6 +448,7 @@ struct MonthsForYearView: View {
 
 struct MonthCard: View {
     let group: MonthGroup
+    @Environment(LanguageManager.self) var lm
 
     private var keepCount: Int   { group.decisions.values.filter { $0 == .keep }.count }
     private var deleteCount: Int { group.decisions.values.filter { $0 == .delete }.count }
@@ -422,20 +456,20 @@ struct MonthCard: View {
     private var remaining: Int   { group.total - group.reviewed - skipCount }
 
     var body: some View {
+        let s = lm.s
         VStack(spacing: 0) {
-            // Top row
             HStack(spacing: 14) {
                 CircularProgress(progress: group.progress, isCompleted: group.isCompleted)
                     .frame(width: 52, height: 52)
 
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
-                        Text(group.title)
+                        Text(lm.s.monthTitle(from: group.id))
                             .font(.system(size: 16, weight: .bold))
                             .foregroundStyle(Theme.textPrimary)
                         Spacer()
                         if group.isCompleted {
-                            Label("Tamam", systemImage: "checkmark")
+                            Label(s.done, systemImage: "checkmark")
                                 .font(.system(size: 10, weight: .bold))
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 8)
@@ -443,7 +477,7 @@ struct MonthCard: View {
                                 .background(Theme.green, in: Capsule())
                         }
                     }
-                    Text("\(group.reviewed) / \(group.total) fotoğraf incelendi")
+                    Text(s.photosReviewedOf(reviewed: group.reviewed, total: group.total))
                         .font(.system(size: 12))
                         .foregroundStyle(Theme.textSecondary)
                 }
@@ -454,18 +488,17 @@ struct MonthCard: View {
             }
             .padding(16)
 
-            // Stats row — sadece en az biri sıfır değilse göster
             if group.reviewed > 0 {
                 Divider().padding(.horizontal, 16)
 
                 HStack(spacing: 0) {
-                    miniStat(icon: "checkmark", value: keepCount, color: Theme.green, label: "Tutuldu")
+                    miniStat(icon: "checkmark", value: keepCount, color: Theme.green, label: s.keptStat)
                     miniDivider
-                    miniStat(icon: "trash", value: deleteCount, color: Theme.red, label: "Silinecek")
+                    miniStat(icon: "trash", value: deleteCount, color: Theme.red, label: s.toDeleteStat)
                     miniDivider
-                    miniStat(icon: "clock", value: skipCount, color: Theme.orange, label: "Atlandı")
+                    miniStat(icon: "clock", value: skipCount, color: Theme.orange, label: s.skippedStat)
                     miniDivider
-                    miniStat(icon: "photo", value: remaining, color: Theme.textTertiary, label: "Bekliyor")
+                    miniStat(icon: "photo", value: remaining, color: Theme.textTertiary, label: s.waitingStat)
                 }
                 .padding(.vertical, 12)
                 .padding(.horizontal, 8)
