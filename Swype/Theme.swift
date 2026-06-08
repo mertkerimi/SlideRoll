@@ -1,10 +1,22 @@
 import SwiftUI
 
 enum Theme {
-    // Adaptive backgrounds
-    static let bg          = Color(.systemBackground)
-    static let surface     = Color(.secondarySystemBackground)
-    static let surfaceHigh = Color(.tertiarySystemBackground)
+    // Adaptive backgrounds — dark mode uses a softer near-black instead of pure black
+    static let bg = Color(UIColor(dynamicProvider: { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.07, green: 0.07, blue: 0.10, alpha: 1) // #121219 warm-dark
+            : UIColor.systemBackground
+    }))
+    static let surface = Color(UIColor(dynamicProvider: { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.11, green: 0.11, blue: 0.15, alpha: 1) // #1C1C26
+            : UIColor.secondarySystemBackground
+    }))
+    static let surfaceHigh = Color(UIColor(dynamicProvider: { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.15, green: 0.15, blue: 0.20, alpha: 1) // #262633
+            : UIColor.tertiarySystemBackground
+    }))
 
     // Accent — updated by LanguageManager when theme changes
     static var accent: Color    = ColorTheme.blue.accent

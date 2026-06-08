@@ -11,6 +11,7 @@ struct ReviewView: View {
     @State private var lastDecision: (id: String, decision: PhotoDecision)? = nil
     @State private var cardID = UUID()
     @State private var showTrash = false
+    @State private var groupTotalBytes: Int64 = 0
 
     private var currentGroup: MonthGroup? {
         vm.monthGroups.first(where: { $0.id == group.id })
@@ -39,6 +40,9 @@ struct ReviewView: View {
             TrashView().environment(vm).environment(lm)
         }
         .onAppear { setupPending() }
+        .task {
+            groupTotalBytes = await vm.totalBytes(in: group.id)
+        }
     }
 
     private var backgroundGlows: some View {
@@ -85,33 +89,18 @@ struct ReviewView: View {
                     .foregroundStyle(Theme.textSecondary)
             }
 
-            Spacer()
-
-            Button { showTrash = true } label: {
-                ZStack(alignment: .topTrailing) {
-                    Image(systemName: "trash")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(Theme.textSecondary)
-                        .frame(width: 36, height: 36)
-                        .background(Theme.surface, in: Circle())
-                        .overlay(Circle().stroke(Theme.border, lineWidth: 1))
-                    if !vm.toDeleteIDs.isEmpty {
-                        Text("\(vm.toDeleteIDs.count)")
-                            .font(.system(size: 8, weight: .black))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, vm.toDeleteIDs.count >= 10 ? 5 : 3)
-                            .padding(.vertical, 3)
-                            .background(Theme.red, in: Capsule())
-                            .offset(x: vm.toDeleteIDs.count >= 10 ? 10 : 4, y: -4)
-                    }
-                }
-            }
+            // Symmetric spacer so title stays centered
+            Color.clear.frame(width: 36, height: 36)
         }
         .padding(.horizontal, 20)
     }
 
     private var progressStrip: some View {
-        VStack(spacing: 8) {
+        let deletedBytes = vm.toDeleteBytes(in: group.id)
+        let savings = groupTotalBytes > 0 ? Double(deletedBytes) / Double(groupTotalBytes) : 0
+
+        return VStack(spacing: 6) {
+            // Review progress bar
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule().fill(Theme.surfaceHigh).frame(height: 4)
@@ -132,7 +121,45 @@ struct ReviewView: View {
                     .font(.system(size: 11, weight: .medium, design: .rounded))
                     .foregroundStyle(Theme.textTertiary)
             }
+
+            // Storage savings bar — shown only when we have size data
+            if groupTotalBytes > 0 {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Theme.surfaceHigh).frame(height: 3)
+                        Capsule()
+                            .fill(Theme.greenGradient)
+                            .frame(width: geo.size.width * savings, height: 3)
+                            .animation(.spring(response: 0.5, dampingFraction: 0.8), value: savings)
+                    }
+                }
+                .frame(height: 3)
+
+                HStack {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.down.circle.fill")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(Theme.green)
+                        Text(lm.s.savingsLabel)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(Theme.textTertiary)
+                    }
+                    Spacer()
+                    Text(deletedBytes > 0 ? formatBytes(deletedBytes) : "—")
+                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        .foregroundStyle(deletedBytes > 0 ? Theme.green : Theme.textTertiary)
+                        .contentTransition(.numericText())
+                        .animation(.spring(response: 0.3), value: deletedBytes)
+                }
+            }
         }
+    }
+
+    private func formatBytes(_ bytes: Int64) -> String {
+        guard bytes > 0 else { return "—" }
+        let gb = Double(bytes) / 1_073_741_824
+        if gb >= 1 { return String(format: "%.1f GB", gb) }
+        return String(format: "%.0f MB", Double(bytes) / 1_048_576)
     }
 
     private var cardDeck: some View {
@@ -203,9 +230,21 @@ struct ReviewView: View {
                     handleSwipe(.skip)
                 }
 
-                actionButton(icon: "trash", color: Theme.textSecondary,
-                             bg: Theme.surface, border: true) {
-                    showTrash = true
+                // Trash button with badge
+                ZStack(alignment: .topTrailing) {
+                    actionButton(icon: "trash", color: Theme.textSecondary,
+                                 bg: Theme.surface, border: true) {
+                        showTrash = true
+                    }
+                    if !vm.toDeleteIDs.isEmpty {
+                        Text("\(vm.toDeleteIDs.count)")
+                            .font(.system(size: 8, weight: .black))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, vm.toDeleteIDs.count >= 10 ? 5 : 3)
+                            .padding(.vertical, 3)
+                            .background(Theme.red, in: Capsule())
+                            .offset(x: vm.toDeleteIDs.count >= 10 ? 8 : 4, y: -4)
+                    }
                 }
             }
         }

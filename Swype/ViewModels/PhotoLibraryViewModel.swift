@@ -16,7 +16,35 @@ class PhotoLibraryViewModel {
     var videoCount: Int = 0
     var photoBytes: Int64 = 0
     var videoBytes: Int64 = 0
+    var favoritesCount: Int = 0
+    var duplicateGroups: [[String]] = []
+    var yearlyStorage: [(year: String, bytes: Int64)] = []
+
+    // Only count groups where all photos are still undecided
+    var duplicateCount: Int {
+        let decidedIDs = Set(monthGroups.flatMap { g in
+            g.decisions.compactMap { id, d in d != .undecided ? id : nil }
+        })
+        return duplicateGroups.filter { group in
+            group.filter { !decidedIDs.contains($0) }.count >= 2
+        }.count
+    }
     var statsLoading = false
+
+    // Trash size — computed on demand
+    var trashBytes: Int64 {
+        toDeleteIDs.compactMap { allAssets[$0] }.reduce(0) { sum, asset in
+            sum + PHAssetResource.assetResources(for: asset).reduce(0) {
+                $0 + ((($1.value(forKey: "fileSize") as? Int64) ?? 0))
+            }
+        }
+    }
+
+    // Cumulative stats — persisted across sessions
+    var totalDeletedCount: Int {
+        get { UserDefaults.standard.integer(forKey: "TotalDeletedCount") }
+        set { UserDefaults.standard.set(newValue, forKey: "TotalDeletedCount") }
+    }
 
     let imageManager = PHCachingImageManager()
     private let persistenceKey = "PhotoCleanerDecisions"
@@ -142,6 +170,30 @@ class PhotoLibraryViewModel {
         monthGroups.flatMap { $0.pendingIDs }.shuffled()
     }
 
+    // Bytes of photos marked for delete in a specific group (fast — only iterates decided IDs)
+    func toDeleteBytes(in groupID: String) -> Int64 {
+        guard let group = monthGroups.first(where: { $0.id == groupID }) else { return 0 }
+        let ids = group.decisions.compactMap { id, d in d == .delete ? id : nil }
+        return ids.compactMap { allAssets[$0] }.reduce(0) { sum, asset in
+            sum + PHAssetResource.assetResources(for: asset).reduce(0) {
+                $0 + (($1.value(forKey: "fileSize") as? Int64) ?? 0)
+            }
+        }
+    }
+
+    // Total bytes of all photos in a group — loaded async so it doesn't block
+    func totalBytes(in groupID: String) async -> Int64 {
+        guard let group = monthGroups.first(where: { $0.id == groupID }) else { return 0 }
+        let assets = group.photoIDs.compactMap { allAssets[$0] }
+        return await Task.detached(priority: .utility) {
+            assets.reduce(0) { sum, asset in
+                sum + PHAssetResource.assetResources(for: asset).reduce(0) {
+                    $0 + (($1.value(forKey: "fileSize") as? Int64) ?? 0)
+                }
+            }
+        }.value
+    }
+
     func removeFromTrash(photoID: String) {
         toDeleteIDs.removeAll { $0 == photoID }
         for idx in monthGroups.indices {
@@ -164,6 +216,7 @@ class PhotoLibraryViewModel {
         var saved = savedDecisions
         for id in ids { saved.removeValue(forKey: id) }
         savedDecisions = saved
+        totalDeletedCount += ids.count
         toDeleteIDs = []
         for idx in monthGroups.indices {
             for id in ids {
@@ -203,26 +256,69 @@ class PhotoLibraryViewModel {
 
             var pBytes: Int64 = 0
             var vBytes: Int64 = 0
+            var favorites = 0
+            // year -> bytes (photos + videos)
+            var yearMap: [String: Int64] = [:]
+            // duplicate detection: day+size -> [assetID]
+            let dayFormatter = DateFormatter()
+            dayFormatter.dateFormat = "yyyy-MM-dd"
+            var dayBuckets: [String: [(id: String, size: Int64)]] = [:]
+            let yearFormatter = DateFormatter()
+            yearFormatter.dateFormat = "yyyy"
 
             photoFetch.enumerateObjects { asset, _, _ in
+                var size: Int64 = 0
                 for resource in PHAssetResource.assetResources(for: asset) {
-                    pBytes += (resource.value(forKey: "fileSize") as? Int64) ?? 0
+                    size += (resource.value(forKey: "fileSize") as? Int64) ?? 0
                 }
+                pBytes += size
+                if asset.isFavorite { favorites += 1 }
+
+                let date = asset.creationDate ?? Date.distantPast
+                let year = yearFormatter.string(from: date)
+                yearMap[year, default: 0] += size
+
+                let day = dayFormatter.string(from: date)
+                dayBuckets[day, default: []].append((id: asset.localIdentifier, size: size))
             }
+
             videoFetch.enumerateObjects { asset, _, _ in
+                var size: Int64 = 0
                 for resource in PHAssetResource.assetResources(for: asset) {
-                    vBytes += (resource.value(forKey: "fileSize") as? Int64) ?? 0
+                    size += (resource.value(forKey: "fileSize") as? Int64) ?? 0
+                }
+                vBytes += size
+                let date = asset.creationDate ?? Date.distantPast
+                let year = yearFormatter.string(from: date)
+                yearMap[year, default: 0] += size
+            }
+
+            // Find duplicates: same day, same file size → group them
+            var dupGroups: [[String]] = []
+            for (_, items) in dayBuckets {
+                // group by size
+                var sizeMap: [Int64: [String]] = [:]
+                for item in items { sizeMap[item.size, default: []].append(item.id) }
+                for (_, ids) in sizeMap where ids.count >= 2 {
+                    dupGroups.append(ids)
                 }
             }
 
-            return (photoFetch.count, videoFetch.count, pBytes, vBytes)
+            let yearly = yearMap
+                .map { (year: $0.key, bytes: $0.value) }
+                .sorted { $0.year > $1.year }
+
+            return (photoFetch.count, videoFetch.count, pBytes, vBytes, favorites, dupGroups, yearly)
         }.value
 
-        photoCount = result.0
-        videoCount = result.1
-        photoBytes = result.2
-        videoBytes = result.3
-        statsLoading = false
+        photoCount      = result.0
+        videoCount      = result.1
+        photoBytes      = result.2
+        videoBytes      = result.3
+        favoritesCount  = result.4
+        duplicateGroups = result.5
+        yearlyStorage   = result.6
+        statsLoading    = false
     }
 
     func startCaching(ids: [String], targetSize: CGSize) {

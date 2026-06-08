@@ -56,6 +56,7 @@ struct Strings {
     var pendingLabel: String    { pick("Bekliyor", "Pending", "Ausstehend") }
     var completedLabel: String  { pick("Tamamlandı","Completed","Abgeschlossen") }
     var tapToDelete: String   { pick("Silmek için dokun", "Tap to delete", "Tippen zum Löschen") }
+    var savingsLabel: String   { pick("Kazanılan Alan", "Space Freed", "Freigegebener Speicher") }
     var actionStart: String    { pick("Başla",     "Start",     "Starten") }
     var actionContinue: String { pick("Devam Et",  "Continue",  "Weiter") }
     var shuffleTitle: String   { pick("Karışık İnceleme", "Shuffle Review", "Zufällige Überprüfung") }
@@ -158,9 +159,21 @@ struct Strings {
     var statCalculating: String     { pick("Hesaplanıyor…",   "Calculating…",   "Wird berechnet…") }
     var statCalculatingHint: String { pick("Kütüphane boyutu hesaplanıyor,\n lütfen bekleyiniz.", "Calculating library size,\nplease wait a moment.", "Bibliotheksgröße wird berechnet,\nbitte warten.") }
     var statProgress: String        { pick("İlerleme",        "Progress",        "Fortschritt") }
-    var statReviewed: String    { pick("İncelendi",       "Reviewed",       "Überprüft") }
-    var statKept: String        { pick("Tutuldu",         "Kept",           "Behalten") }
-    var statToDelete: String    { pick("Silinecek",       "To Delete",      "Zu löschen") }
+    var statReviewed: String    { pick("İncelendi",  "Reviewed",   "Überprüft") }
+    var statKept: String        { pick("Tutuldu",    "Kept",       "Behalten") }
+    var statToDelete: String    { pick("Silinecek",  "To Delete",  "Zu löschen") }
+    var statDeleted: String     { pick("Silindi",    "Deleted",    "Gelöscht") }
+    var statFavorites: String   { pick("Favori",     "Favorites",  "Favoriten") }
+    var statTrashSize: String   { pick("Silinecek Alan", "Trash Size", "Papierkorb") }
+    var statDuplicates: String  { pick("Olası Kopya","Duplicates", "Duplikate") }
+    var statByYear: String      { pick("Yıllara Göre Depolama", "Storage by Year", "Speicher nach Jahr") }
+
+    // MARK: - Duplicates
+    var dupTitle: String        { pick("Olası Kopyalar",    "Potential Duplicates", "Mögliche Duplikate") }
+    var dupHint: String         { pick("Saklamak istediğin fotoğrafa dokun", "Tap the photo you want to keep", "Tippe auf das Foto, das du behalten möchtest") }
+    var dupSkip: String         { pick("Bu grubu atla",     "Skip this group",      "Diese Gruppe überspringen") }
+    var dupCompleted: String    { pick("Hepsi tamam!",       "All done!",            "Alles erledigt!") }
+    var dupCompletedSub: String { pick("Tüm kopya grupları incelendi.", "All duplicate groups reviewed.", "Alle Duplikatgruppen überprüft.") }
 
     func statItemCount(_ n: Int) -> String { pick(
         "\(n) öğe",

@@ -27,7 +27,7 @@ struct MonthListView: View {
 
                 if !vm.toDeleteIDs.isEmpty {
                     trashFloatingBar
-                        .padding(.bottom, 32)
+                        .padding(.bottom, 80)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
@@ -96,7 +96,7 @@ struct MonthListView: View {
                     }
                 }
                 .padding(.horizontal, 20)
-                .padding(.bottom, vm.toDeleteIDs.isEmpty ? 40 : 110)
+                .padding(.bottom, vm.toDeleteIDs.isEmpty ? 76 : 152)
             }
         }
     }
@@ -406,12 +406,12 @@ struct MonthsForYearView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
-                .padding(.bottom, vm.toDeleteIDs.isEmpty ? 40 : 110)
+                .padding(.bottom, vm.toDeleteIDs.isEmpty ? 76 : 152)
             }
 
             if !vm.toDeleteIDs.isEmpty {
                 trashFloatingBar
-                    .padding(.bottom, 32)
+                    .padding(.bottom, 80)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
