@@ -6,7 +6,7 @@ struct MonthListView: View {
     @Environment(PhotoLibraryViewModel.self) var vm
     @Environment(LanguageManager.self) var lm
     @State private var showTrash = false
-    @State private var showSettings = false
+    @State private var showShuffle = false
 
     var body: some View {
         NavigationStack {
@@ -37,8 +37,8 @@ struct MonthListView: View {
             .sheet(isPresented: $showTrash) {
                 TrashView().environment(vm).environment(lm)
             }
-            .sheet(isPresented: $showSettings) {
-                SettingsView().environment(lm)
+            .fullScreenCover(isPresented: $showShuffle) {
+                GlobalReviewView().environment(vm).environment(lm)
             }
         }
     }
@@ -63,27 +63,14 @@ struct MonthListView: View {
     // MARK: Nav
 
     private var navHeader: some ToolbarContent {
-        Group {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button { showSettings = true } label: {
-                    Image(systemName: "gearshape")
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(Theme.textSecondary)
-                        .frame(width: 34, height: 34)
-                        .background(Theme.surface, in: Circle())
-                        .overlay(Circle().stroke(Theme.border, lineWidth: 1))
-                }
-            }
-
-            ToolbarItem(placement: .principal) {
-                HStack(spacing: 8) {
-                    Image(systemName: "photo.stack.fill")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(Theme.accentGradient)
-                    Text("Swype")
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                        .foregroundStyle(Theme.textPrimary)
-                }
+        ToolbarItem(placement: .principal) {
+            HStack(spacing: 8) {
+                Image(systemName: "photo.stack.fill")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(Theme.accentGradient)
+                Text("Swype")
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundStyle(Theme.textPrimary)
             }
         }
     }
@@ -155,6 +142,21 @@ struct MonthListView: View {
                 summaryChip(value: "\(vm.toDeleteIDs.count)", label: s.toDeleteStat, color: Theme.red)
                 summaryChip(value: String(format: "%0.f%%", progress * 100), label: s.completedLabel, color: Theme.green)
                 summaryChip(value: "\(vm.yearGroups.count)", label: s.yearLabel, color: Theme.accent)
+            }
+
+            // Shuffle button
+            Button { showShuffle = true } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "shuffle")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text(s.shuffleHint)
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .foregroundStyle(Theme.accent)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(Theme.accent.opacity(0.10), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Theme.accent.opacity(0.20), lineWidth: 1))
             }
         }
         .padding(20)
@@ -249,6 +251,7 @@ struct MonthListView: View {
 struct YearCard: View {
     let year: YearGroup
     @Environment(LanguageManager.self) var lm
+    @Environment(\.colorScheme) var colorScheme
     @State private var appeared = false
 
     var body: some View {
@@ -292,34 +295,69 @@ struct YearCard: View {
                 .fill(Theme.surface)
                 .overlay(
                     RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .stroke(Theme.border, lineWidth: 1)
+                        .fill(cardGradientOverlay)
+                        .animation(.easeInOut(duration: 0.4), value: year.progress)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(cardBorderColor, lineWidth: 1)
+                        .animation(.easeInOut(duration: 0.4), value: year.progress)
                 )
         )
-        .shadow(color: .black.opacity(0.3), radius: 16, y: 6)
+        .shadow(color: cardShadowColor.opacity(0.12), radius: 16, y: 6)
         .onAppear { appeared = true }
         .onDisappear { appeared = false }
+    }
+
+    private var cardOpacity: Double { colorScheme == .dark ? 0.08 : 0.14 }
+    private var borderOpacity: Double { colorScheme == .dark ? 0.20 : 0.35 }
+
+    private var cardGradientOverlay: LinearGradient {
+        let color: Color
+        if year.isCompleted { color = Theme.green }
+        else if year.progress > 0 { color = Theme.orange }
+        else { color = Theme.accent }
+        return LinearGradient(
+            colors: [color.opacity(cardOpacity), color.opacity(0)],
+            startPoint: .leading, endPoint: .trailing
+        )
+    }
+
+    private var cardBorderColor: Color {
+        if year.isCompleted { return Theme.green.opacity(borderOpacity) }
+        if year.progress > 0 { return Theme.orange.opacity(borderOpacity * 0.9) }
+        return Theme.border
+    }
+
+    private var cardShadowColor: Color {
+        if year.isCompleted { return Theme.green }
+        if year.progress > 0 { return Theme.orange }
+        return .black
     }
 
     private func percentBadge(s: Strings) -> some View {
         Group {
             if year.isCompleted {
-                HStack(spacing: 5) {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 10, weight: .black))
-                    Text(s.done)
-                        .font(.system(size: 12, weight: .bold))
-                }
-                .foregroundStyle(.black)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Theme.greenGradient, in: Capsule())
-            } else {
-                Text(String(format: "%0.f%%", year.progress * 100))
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundStyle(Theme.accent)
-                    .padding(.horizontal, 12)
+                Label(s.done, systemImage: "checkmark")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(Theme.accent.opacity(0.12), in: Capsule())
+                    .background(Theme.green, in: Capsule())
+            } else if year.progress > 0 {
+                Label(s.actionContinue, systemImage: "play.fill")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Theme.orange)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Theme.orange.opacity(0.15), in: Capsule())
+            } else {
+                Label(s.actionStart, systemImage: "play.fill")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Theme.accent)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Theme.accent.opacity(0.15), in: Capsule())
             }
         }
     }
@@ -350,7 +388,6 @@ struct MonthsForYearView: View {
     @Environment(LanguageManager.self) var lm
     @State private var selectedGroup: MonthGroup?
     @State private var showTrash = false
-    @State private var showSettings = false
 
     private var currentYear: YearGroup? {
         vm.yearGroups.first(where: { $0.id == year.id })
@@ -381,21 +418,6 @@ struct MonthsForYearView: View {
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: vm.toDeleteIDs.isEmpty)
         .navigationTitle(year.title)
         .navigationBarTitleDisplayMode(.large)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button { showSettings = true } label: {
-                    Image(systemName: "gearshape")
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(Theme.textSecondary)
-                        .frame(width: 34, height: 34)
-                        .background(Theme.surface, in: Circle())
-                        .overlay(Circle().stroke(Theme.border, lineWidth: 1))
-                }
-            }
-        }
-        .sheet(isPresented: $showSettings) {
-            SettingsView().environment(lm)
-        }
         .sheet(item: $selectedGroup) { group in
             ReviewView(group: group).environment(vm).environment(lm)
         }
@@ -449,6 +471,7 @@ struct MonthsForYearView: View {
 struct MonthCard: View {
     let group: MonthGroup
     @Environment(LanguageManager.self) var lm
+    @Environment(\.colorScheme) var colorScheme
 
     private var keepCount: Int   { group.decisions.values.filter { $0 == .keep }.count }
     private var deleteCount: Int { group.decisions.values.filter { $0 == .delete }.count }
@@ -463,28 +486,17 @@ struct MonthCard: View {
                     .frame(width: 52, height: 52)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text(lm.s.monthTitle(from: group.id))
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundStyle(Theme.textPrimary)
-                        Spacer()
-                        if group.isCompleted {
-                            Label(s.done, systemImage: "checkmark")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Theme.green, in: Capsule())
-                        }
-                    }
+                    Text(lm.s.monthTitle(from: group.id))
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(Theme.textPrimary)
                     Text(s.photosReviewedOf(reviewed: group.reviewed, total: group.total))
                         .font(.system(size: 12))
                         .foregroundStyle(Theme.textSecondary)
                 }
 
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Theme.textTertiary)
+                Spacer()
+
+                actionBadge(s: s)
             }
             .padding(16)
 
@@ -509,9 +521,59 @@ struct MonthCard: View {
                 .fill(Theme.surface)
                 .overlay(
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(Theme.border, lineWidth: 1)
+                        .fill(monthCardGradient)
+                        .animation(.easeInOut(duration: 0.4), value: group.progress)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(monthCardBorder, lineWidth: 1)
+                        .animation(.easeInOut(duration: 0.4), value: group.progress)
                 )
         )
+    }
+
+    private var cardOpacity: Double { colorScheme == .dark ? 0.08 : 0.14 }
+    private var borderOpacity: Double { colorScheme == .dark ? 0.20 : 0.35 }
+
+    private func actionBadge(s: Strings) -> some View {
+        Group {
+            if group.isCompleted {
+                Label(s.done, systemImage: "checkmark")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Theme.green, in: Capsule())
+            } else if group.reviewed > 0 {
+                Label(s.actionContinue, systemImage: "play.fill")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Theme.orange)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Theme.orange.opacity(0.15), in: Capsule())
+            } else {
+                Label(s.actionStart, systemImage: "play.fill")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Theme.accent)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Theme.accent.opacity(0.15), in: Capsule())
+            }
+        }
+    }
+
+    private var monthCardGradient: LinearGradient {
+        let color: Color = group.isCompleted ? Theme.green : (group.reviewed > 0 ? Theme.orange : .clear)
+        return LinearGradient(
+            colors: [color.opacity(cardOpacity), color.opacity(0)],
+            startPoint: .leading, endPoint: .trailing
+        )
+    }
+
+    private var monthCardBorder: Color {
+        if group.isCompleted { return Theme.green.opacity(borderOpacity) }
+        if group.reviewed > 0 { return Theme.orange.opacity(borderOpacity * 0.9) }
+        return Theme.border
     }
 
     private func miniStat(icon: String, value: Int, color: Color, label: String) -> some View {
