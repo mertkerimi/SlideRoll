@@ -5,7 +5,7 @@ struct StatsView: View {
     @Environment(LanguageManager.self) var lm
 
     @State private var initialLoad = true
-
+    @State private var showDuplicates = false
     private var isLoading: Bool { initialLoad || vm.statsLoading }
 
     var body: some View {
@@ -14,14 +14,15 @@ struct StatsView: View {
             backgroundGlows
 
             if isLoading {
-                loadingView
-                    .transition(.opacity)
+                loadingView.transition(.opacity)
             } else {
-                content
-                    .transition(.opacity.combined(with: .scale(scale: 0.97)))
+                content.transition(.opacity.combined(with: .scale(scale: 0.97)))
             }
         }
         .animation(.easeInOut(duration: 0.3), value: isLoading)
+        .sheet(isPresented: $showDuplicates) {
+            DuplicatesView().environment(vm).environment(lm)
+        }
         .task { await vm.loadLibraryStats(); initialLoad = false }
     }
 
@@ -30,21 +31,14 @@ struct StatsView: View {
     private var loadingView: some View {
         VStack(spacing: 24) {
             ZStack {
-                Circle()
-                    .fill(Theme.accent.opacity(0.12))
-                    .frame(width: 90, height: 90)
-                ProgressView()
-                    .tint(Theme.accent)
-                    .scaleEffect(1.5)
+                Circle().fill(Theme.accent.opacity(0.12)).frame(width: 90, height: 90)
+                ProgressView().tint(Theme.accent).scaleEffect(1.5)
             }
             VStack(spacing: 8) {
                 Text(lm.s.statCalculating)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(Theme.textPrimary)
+                    .font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.textPrimary)
                 Text(lm.s.statCalculatingHint)
-                    .font(.system(size: 13))
-                    .foregroundStyle(Theme.textSecondary)
-                    .multilineTextAlignment(.center)
+                    .font(.system(size: 13)).foregroundStyle(Theme.textSecondary).multilineTextAlignment(.center)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -55,10 +49,31 @@ struct StatsView: View {
     private var content: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 16) {
-                mediaCard(icon: "photo.fill", iconColor: Theme.accent,
-                          title: lm.s.statPhotos, count: vm.photoCount, bytes: vm.photoBytes)
-                mediaCard(icon: "video.fill", iconColor: Theme.orange,
-                          title: lm.s.statVideos, count: vm.videoCount, bytes: vm.videoBytes)
+                // Media row
+                HStack(spacing: 12) {
+                    mediaCard(icon: "photo.fill", iconColor: Theme.accent,
+                              title: lm.s.statPhotos, count: vm.photoCount, bytes: vm.photoBytes)
+                    mediaCard(icon: "video.fill", iconColor: Theme.orange,
+                              title: lm.s.statVideos, count: vm.videoCount, bytes: vm.videoBytes)
+                }
+
+                // Quick stats row
+                HStack(spacing: 12) {
+                    quickStat(icon: "heart.fill", value: "\(vm.favoritesCount)",
+                              label: lm.s.statFavorites, color: Theme.red, action: nil)
+                    quickStat(icon: "trash.fill", value: formatBytes(vm.trashBytes),
+                              label: lm.s.statTrashSize, color: Theme.orange, action: nil)
+                    quickStat(icon: "doc.on.doc.fill", value: "~\(vm.duplicateCount)",
+                              label: lm.s.statDuplicates, color: Theme.accent,
+                              action: vm.duplicateCount > 0 ? { showDuplicates = true } : nil)
+                }
+
+                // Year chart
+                if !vm.yearlyStorage.isEmpty {
+                    yearChartCard
+                }
+
+                // Swype progress
                 swypeCard
             }
             .padding(.horizontal, 20)
@@ -67,24 +82,104 @@ struct StatsView: View {
         }
     }
 
-    // MARK: - Media Card
+    // MARK: - Media Card (half width)
 
     private func mediaCard(icon: String, iconColor: Color, title: String, count: Int, bytes: Int64) -> some View {
-        HStack(spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             ZStack {
-                Circle().fill(iconColor.opacity(0.15)).frame(width: 52, height: 52)
-                Image(systemName: icon).font(.system(size: 22, weight: .semibold)).foregroundStyle(iconColor)
+                Circle().fill(iconColor.opacity(0.15)).frame(width: 40, height: 40)
+                Image(systemName: icon).font(.system(size: 17, weight: .semibold)).foregroundStyle(iconColor)
             }
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.textPrimary)
-                Text(lm.s.statItemCount(count)).font(.system(size: 13)).foregroundStyle(Theme.textSecondary)
-            }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(formatBytes(bytes))
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.textPrimary)
-                Text(lm.s.statStorage).font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.textTertiary)
+                Text(title).font(.system(size: 12, weight: .medium)).foregroundStyle(Theme.textSecondary)
+                Text(lm.s.statItemCount(count)).font(.system(size: 11)).foregroundStyle(Theme.textTertiary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Theme.surface)
+                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Theme.border, lineWidth: 1))
+        )
+    }
+
+    // MARK: - Quick Stat (third width)
+
+    private func quickStat(icon: String, value: String, label: String, color: Color, action: (() -> Void)?) -> some View {
+        Button {
+            action?()
+        } label: {
+            VStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(color)
+                Text(value)
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundStyle(Theme.textPrimary)
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
+                Text(label)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(Theme.textTertiary)
+                    .multilineTextAlignment(.center)
+                if action != nil {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(Theme.textTertiary)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Theme.surface)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(action != nil ? color.opacity(0.25) : Theme.border, lineWidth: 1)
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(action == nil)
+    }
+
+    // MARK: - Year Chart
+
+    private var yearChartCard: some View {
+        let maxBytes = vm.yearlyStorage.map(\.bytes).max() ?? 1
+        return VStack(alignment: .leading, spacing: 14) {
+            Text(lm.s.statByYear)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Theme.textSecondary)
+
+            VStack(spacing: 10) {
+                ForEach(vm.yearlyStorage.prefix(8), id: \.year) { item in
+                    HStack(spacing: 10) {
+                        Text(item.year)
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .foregroundStyle(Theme.textSecondary)
+                            .frame(width: 36, alignment: .leading)
+
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(Theme.surfaceHigh)
+                                    .frame(height: 20)
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(Theme.accentGradient)
+                                    .frame(width: geo.size.width * CGFloat(item.bytes) / CGFloat(maxBytes), height: 20)
+                            }
+                        }
+                        .frame(height: 20)
+
+                        Text(formatBytes(item.bytes))
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .foregroundStyle(Theme.textTertiary)
+                            .frame(width: 52, alignment: .trailing)
+                    }
+                }
             }
         }
         .padding(20)
@@ -125,7 +220,9 @@ struct StatsView: View {
                 swypeDivider
                 swypeStat(value: "\(kept)", label: lm.s.statKept, color: Theme.green)
                 swypeDivider
-                swypeStat(value: "\(toDelete)", label: lm.s.statToDelete, color: Theme.red)
+                swypeStat(value: "\(toDelete)", label: lm.s.statToDelete, color: Theme.orange)
+                swypeDivider
+                swypeStat(value: "\(vm.totalDeletedCount)", label: lm.s.statDeleted, color: Theme.red)
             }
         }
         .padding(20)
@@ -143,9 +240,9 @@ struct StatsView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private var swypeDivider: some View {
-        Rectangle().fill(Theme.border).frame(width: 1, height: 32)
-    }
+    private var swypeDivider: some View { Rectangle().fill(Theme.border).frame(width: 1, height: 32) }
+
+    // MARK: - Helpers
 
     private func formatBytes(_ bytes: Int64) -> String {
         guard bytes > 0 else { return "—" }
