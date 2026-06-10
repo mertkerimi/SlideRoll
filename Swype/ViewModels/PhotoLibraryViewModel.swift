@@ -10,6 +10,7 @@ class PhotoLibraryViewModel {
     var monthGroups: [MonthGroup] = []
     var isLoading = false
     var toDeleteIDs: [String] = []
+    var favoriteIDs: Set<String> = []
 
     // Library stats
     var photoCount: Int = 0
@@ -73,7 +74,11 @@ class PhotoLibraryViewModel {
         isLoading = true
         let fetchOptions = PHFetchOptions()
         fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-        fetchOptions.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.image.rawValue)
+        fetchOptions.predicate = NSPredicate(
+            format: "mediaType == %d || mediaType == %d",
+            PHAssetMediaType.image.rawValue,
+            PHAssetMediaType.video.rawValue
+        )
 
         let result = PHAsset.fetchAssets(with: fetchOptions)
         var assets: [PHAsset] = []
@@ -82,7 +87,7 @@ class PhotoLibraryViewModel {
         }
 
         var localAssets: [String: PHAsset] = [:]
-        var groups: [String: (title: String, ids: [String])] = [:]
+        var groups: [String: (title: String, ids: [String], videoCount: Int)] = [:]
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "tr_TR")
         formatter.dateFormat = "MMMM yyyy"
@@ -95,12 +100,14 @@ class PhotoLibraryViewModel {
             let title = formatter.string(from: date).capitalized
             localAssets[asset.localIdentifier] = asset
             if groups[key] == nil {
-                groups[key] = (title: title, ids: [])
+                groups[key] = (title: title, ids: [], videoCount: 0)
             }
             groups[key]!.ids.append(asset.localIdentifier)
+            if asset.mediaType == .video { groups[key]!.videoCount += 1 }
         }
 
         allAssets = localAssets
+        favoriteIDs = Set(assets.filter { $0.isFavorite }.map { $0.localIdentifier })
 
         let decisions = savedDecisions
         var built: [MonthGroup] = groups.map { key, val in
@@ -110,7 +117,7 @@ class PhotoLibraryViewModel {
                     dec[id] = d
                 }
             }
-            return MonthGroup(id: key, title: val.title, photoIDs: val.ids, decisions: dec)
+            return MonthGroup(id: key, title: val.title, photoIDs: val.ids, videoCount: val.videoCount, decisions: dec)
         }
         built.sort { $0.id > $1.id }
 
@@ -129,6 +136,83 @@ class PhotoLibraryViewModel {
     }
 
     func asset(for id: String) -> PHAsset? { allAssets[id] }
+
+    func isVideo(for id: String) -> Bool {
+        allAssets[id]?.mediaType == .video
+    }
+
+    func videoDuration(for id: String) -> TimeInterval? {
+        guard let asset = allAssets[id], asset.mediaType == .video else { return nil }
+        return asset.duration
+    }
+
+    func shareItems(for id: String) async -> [Any] {
+        guard let asset = allAssets[id] else { return [] }
+        if asset.mediaType == .video {
+            return await withCheckedContinuation { continuation in
+                let options = PHVideoRequestOptions()
+                options.isNetworkAccessAllowed = true
+                options.deliveryMode = .highQualityFormat
+                PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
+                    if let urlAsset = avAsset as? AVURLAsset {
+                        continuation.resume(returning: [urlAsset.url])
+                    } else {
+                        continuation.resume(returning: [])
+                    }
+                }
+            }
+        } else {
+            return await withCheckedContinuation { continuation in
+                let options = PHImageRequestOptions()
+                options.deliveryMode = .highQualityFormat
+                options.isNetworkAccessAllowed = true
+                var resumed = false
+                PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize,
+                                                      contentMode: .default, options: options) { image, info in
+                    guard !resumed else { return }
+                    let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+                    if !isDegraded {
+                        resumed = true
+                        continuation.resume(returning: image.map { [$0] } ?? [])
+                    }
+                }
+            }
+        }
+    }
+
+    func toggleFavorite(for id: String) async {
+        guard let asset = allAssets[id] else { return }
+        let newValue = !favoriteIDs.contains(id)
+        do {
+            try await PHPhotoLibrary.shared().performChanges {
+                PHAssetChangeRequest(for: asset).isFavorite = newValue
+            }
+            if newValue { favoriteIDs.insert(id) } else { favoriteIDs.remove(id) }
+        } catch {}
+    }
+
+    func isLivePhoto(for id: String) -> Bool {
+        allAssets[id]?.mediaSubtypes.contains(.photoLive) ?? false
+    }
+
+    func loadLivePhoto(for id: String, targetSize: CGSize) async -> PHLivePhoto? {
+        guard let asset = allAssets[id] else { return nil }
+        return await withCheckedContinuation { continuation in
+            let options = PHLivePhotoRequestOptions()
+            options.isNetworkAccessAllowed = true
+            options.deliveryMode = .highQualityFormat
+            var resumed = false
+            imageManager.requestLivePhoto(for: asset, targetSize: targetSize,
+                                          contentMode: .aspectFill, options: options) { livePhoto, info in
+                guard !resumed else { return }
+                let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+                if !isDegraded {
+                    resumed = true
+                    continuation.resume(returning: livePhoto)
+                }
+            }
+        }
+    }
 
     func applyDecision(_ decision: PhotoDecision, to photoID: String, in groupID: String) {
         guard let idx = monthGroups.firstIndex(where: { $0.id == groupID }) else { return }

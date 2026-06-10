@@ -73,11 +73,31 @@ struct Strings {
         "\(months) months · \(photos) photos",
         "\(months) Monate · \(photos) Fotos"
     )}
+    func monthsPhotosAndVideos(months: Int, photos: Int, videos: Int) -> String {
+        let base = pick(
+            "\(months) ay · \(photos) fotoğraf",
+            "\(months) months · \(photos) photos",
+            "\(months) Monate · \(photos) Fotos"
+        )
+        guard videos > 0 else { return base }
+        let videoStr = pick("\(videos) video", "\(videos) videos", "\(videos) Videos")
+        return base + " · " + videoStr
+    }
     func photosReviewedOf(reviewed: Int, total: Int) -> String { pick(
         "\(reviewed) / \(total) fotoğraf incelendi",
         "\(reviewed) / \(total) photos reviewed",
         "\(reviewed) / \(total) Fotos überprüft"
     )}
+    func photosReviewedOfWithVideos(reviewed: Int, total: Int, videos: Int) -> String {
+        let base = pick(
+            "\(reviewed) / \(total) fotoğraf incelendi",
+            "\(reviewed) / \(total) photos reviewed",
+            "\(reviewed) / \(total) Fotos überprüft"
+        )
+        guard videos > 0 else { return base }
+        let videoStr = pick("\(videos) video", "\(videos) videos", "\(videos) Videos")
+        return base + " · " + videoStr
+    }
 
     // Mini stats labels
     var keptStat: String    { pick("Tutuldu",  "Kept",    "Behalten") }

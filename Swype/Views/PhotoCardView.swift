@@ -1,4 +1,7 @@
 import SwiftUI
+import AVKit
+import Photos
+import PhotosUI
 
 enum SwipeDirection {
     case keep, delete, skip, none
@@ -14,6 +17,19 @@ struct PhotoCardView: View {
     @State private var offset: CGSize = .zero
     @State private var image: UIImage?
     @State private var isDragging = false
+    @State private var isVideo = false
+    @State private var player: AVPlayer?
+    @State private var isVideoLoading = false
+    @State private var isPlaying = false
+
+    @State private var isLivePhoto = false
+    @State private var livePhoto: PHLivePhoto?
+    @State private var isLivePhotoPlaying = false
+    @State private var isLivePhotoLoading = false
+
+    @State private var shareItems: [Any] = []
+    @State private var showShareSheet = false
+    @State private var isLoadingShare = false
 
     // Zoom state
     @State private var scale: CGFloat = 1.0
@@ -45,6 +61,8 @@ struct PhotoCardView: View {
                 keepBadge.opacity(keepOpacity)
                 deleteBadge.opacity(deleteOpacity)
                 skipBadge.opacity(skipOpacity)
+                shareButton
+                favoriteButton
             }
             .frame(width: geo.size.width, height: geo.size.height)
             .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
@@ -56,27 +74,112 @@ struct PhotoCardView: View {
             .gesture(magnifyGesture)
             .onTapGesture {
                 if isZoomed {
-                    // Reset zoom
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                         scale = 1.0; lastScale = 1.0
                         zoomOffset = .zero; lastZoomOffset = .zero
                     }
                 } else if !isDragging {
-                    onTapUndo()
+                    if isVideo {
+                        handleVideoTap()
+                    } else if isLivePhoto {
+                        handleLivePhotoTap()
+                    } else {
+                        onTapUndo()
+                    }
                 }
             }
         }
         .task {
+            isVideo = vm.isVideo(for: photoID)
+            isLivePhoto = vm.isLivePhoto(for: photoID)
             image = await vm.loadImage(for: photoID, targetSize: CGSize(width: 700, height: 900))
+            if isLivePhoto {
+                let lp = await vm.loadLivePhoto(for: photoID, targetSize: CGSize(width: 700, height: 900))
+                livePhoto = lp
+                isLivePhotoPlaying = true
+            }
+        }
+        .onDisappear {
+            player?.pause()
+            player = nil
+            isPlaying = false
+            isLivePhotoPlaying = false
+            livePhoto = nil
+        }
+        .sheet(isPresented: $showShareSheet) {
+            ShareSheet(items: shareItems)
+                .presentationDetents([.medium, .large])
         }
     }
 
-    // MARK: - Photo Layer
+    private func handleVideoTap() {
+        if let player {
+            if isPlaying {
+                player.pause()
+                isPlaying = false
+            } else {
+                player.play()
+                isPlaying = true
+            }
+        } else {
+            loadInlineVideo()
+        }
+    }
+
+    private func loadInlineVideo() {
+        guard !isVideoLoading, let asset = vm.asset(for: photoID) else { return }
+        isVideoLoading = true
+        let options = PHVideoRequestOptions()
+        options.isNetworkAccessAllowed = true
+        options.deliveryMode = .highQualityFormat
+        PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
+            DispatchQueue.main.async {
+                guard let avAsset else { self.isVideoLoading = false; return }
+                let p = AVPlayer(playerItem: AVPlayerItem(asset: avAsset))
+                p.play()
+                self.player = p
+                self.isPlaying = true
+                self.isVideoLoading = false
+                // Loop
+                NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime,
+                    object: p.currentItem, queue: .main) { _ in p.seek(to: .zero); p.play() }
+            }
+        }
+    }
+
+    private func handleLivePhotoTap() {
+        if livePhoto != nil {
+            isLivePhotoPlaying.toggle()
+        } else {
+            loadLivePhotoAndPlay()
+        }
+    }
+
+    private func loadLivePhotoAndPlay() {
+        guard !isLivePhotoLoading else { return }
+        isLivePhotoLoading = true
+        Task {
+            let lp = await vm.loadLivePhoto(for: photoID, targetSize: CGSize(width: 700, height: 900))
+            livePhoto = lp
+            isLivePhotoPlaying = true
+            isLivePhotoLoading = false
+        }
+    }
+
+    // MARK: - Photo/Video Layer
 
     private func photoLayer(size: CGSize) -> some View {
         ZStack {
-            Theme.surface
-            if let img = image {
+            Color.black
+            if let p = player {
+                InlineVideoPlayer(player: p)
+                    .frame(width: size.width, height: size.height)
+                    .transition(.opacity.animation(.easeIn(duration: 0.2)))
+            } else if let lp = livePhoto {
+                LivePhotoPlayerView(livePhoto: lp, isPlaying: isLivePhotoPlaying)
+                    .frame(width: size.width, height: size.height)
+                    .transition(.opacity.animation(.easeIn(duration: 0.2)))
+            } else if let img = image {
                 Image(uiImage: img)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
@@ -84,13 +187,91 @@ struct PhotoCardView: View {
                     .transition(.opacity.animation(.easeIn(duration: 0.25)))
             } else {
                 VStack(spacing: 12) {
-                    Image(systemName: "photo")
+                    Image(systemName: isVideo ? "video" : "photo")
                         .font(.system(size: 40))
                         .foregroundStyle(Theme.textTertiary)
                     ProgressView().tint(Theme.accent)
                 }
             }
+
+            if isVideo { videoOverlay }
+            if isLivePhoto { livePhotoOverlay }
         }
+    }
+
+    private var videoOverlay: some View {
+        ZStack {
+            if !isPlaying {
+                // Play button — shown when paused / not yet started
+                Circle()
+                    .fill(.black.opacity(0.55))
+                    .frame(width: 64, height: 64)
+                Image(systemName: isVideoLoading ? "ellipsis" : "play.fill")
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .offset(x: isVideoLoading ? 0 : 3)
+            }
+
+            VStack {
+                Spacer()
+                HStack {
+                    if let duration = vm.videoDuration(for: photoID) {
+                        Text(formatDuration(duration))
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(.black.opacity(0.6), in: Capsule())
+                            .padding(.leading, 12)
+                            .padding(.bottom, 12)
+                    }
+                    Spacer()
+                    Image(systemName: isPlaying ? "pause.fill" : "video.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.black.opacity(0.6), in: Capsule())
+                        .padding(.trailing, 12)
+                        .padding(.bottom, 12)
+                }
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: isPlaying)
+    }
+
+    private func formatDuration(_ duration: TimeInterval) -> String {
+        let mins = Int(duration) / 60
+        let secs = Int(duration) % 60
+        return String(format: "%d:%02d", mins, secs)
+    }
+
+    private var livePhotoOverlay: some View {
+        ZStack {
+            // Native-style Live Photo badge — top left, always visible
+            VStack {
+                HStack {
+                    Image(systemName: isLivePhotoLoading ? "ellipsis" : "livephoto")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .shadow(color: .black.opacity(0.6), radius: 4, x: 0, y: 1)
+                        .padding(.leading, 14)
+                        .padding(.top, 14)
+                    Spacer()
+                }
+                Spacer()
+            }
+
+            // Loading indicator — shown while live photo is being fetched
+            if isLivePhotoLoading {
+                Circle()
+                    .fill(.black.opacity(0.45))
+                    .frame(width: 56, height: 56)
+                ProgressView().tint(.white).scaleEffect(1.2)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: isLivePhotoPlaying)
+        .animation(.easeInOut(duration: 0.2), value: isLivePhotoLoading)
     }
 
     // MARK: - Gestures
@@ -224,4 +405,118 @@ struct PhotoCardView: View {
             Spacer()
         }
     }
+
+    private var shareButton: some View {
+        VStack {
+            Spacer()
+            HStack {
+                Spacer()
+                Button {
+                    loadAndShare()
+                } label: {
+                    Image(systemName: isLoadingShare ? "ellipsis" : "square.and.arrow.up")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 38, height: 38)
+                        .background(.black.opacity(0.45), in: Circle())
+                }
+                .padding(.trailing, 12)
+                .padding(.bottom, 58)
+            }
+        }
+    }
+
+    private func loadAndShare() {
+        guard !isLoadingShare else { return }
+        isLoadingShare = true
+        Task {
+            let items = await vm.shareItems(for: photoID)
+            shareItems = items
+            isLoadingShare = false
+            if !items.isEmpty { showShareSheet = true }
+        }
+    }
+
+    private var favoriteButton: some View {
+        let isFav = vm.favoriteIDs.contains(photoID)
+        return VStack {
+            Spacer()
+            HStack {
+                Spacer()
+                Button {
+                    Task { await vm.toggleFavorite(for: photoID) }
+                } label: {
+                    Image(systemName: isFav ? "heart.fill" : "heart")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(isFav ? Color.pink : Color.white)
+                        .frame(width: 38, height: 38)
+                        .background(.black.opacity(0.45), in: Circle())
+                        .shadow(color: isFav ? Color.pink.opacity(0.5) : .clear, radius: 8)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isFav)
+                }
+                .padding(.trailing, 12)
+                .padding(.bottom, 12)
+            }
+        }
+    }
+}
+
+// UIViewRepresentable wrapping PHLivePhotoView — gesture-safe inline playback
+private struct LivePhotoPlayerView: UIViewRepresentable {
+    let livePhoto: PHLivePhoto
+    let isPlaying: Bool
+
+    func makeUIView(context: Context) -> PHLivePhotoView {
+        let view = PHLivePhotoView()
+        view.livePhoto = livePhoto
+        view.contentMode = .scaleAspectFit
+        view.clipsToBounds = true
+        view.isMuted = false
+        return view
+    }
+
+    func updateUIView(_ uiView: PHLivePhotoView, context: Context) {
+        uiView.livePhoto = livePhoto
+        if isPlaying {
+            uiView.startPlayback(with: .full)
+        } else {
+            uiView.stopPlayback()
+        }
+    }
+}
+
+// UIViewRepresentable wrapping AVPlayerLayer — no gesture conflicts with swipe
+private struct InlineVideoPlayer: UIViewRepresentable {
+    let player: AVPlayer
+
+    func makeUIView(context: Context) -> PlayerLayerView {
+        let view = PlayerLayerView()
+        view.playerLayer.player = player
+        view.playerLayer.videoGravity = .resizeAspect
+        view.backgroundColor = .clear
+        return view
+    }
+
+    func updateUIView(_ uiView: PlayerLayerView, context: Context) {
+        uiView.playerLayer.player = player
+    }
+
+    class PlayerLayerView: UIView {
+        override class var layerClass: AnyClass { AVPlayerLayer.self }
+        var playerLayer: AVPlayerLayer { layer as! AVPlayerLayer }
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            playerLayer.frame = bounds
+        }
+    }
+}
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
