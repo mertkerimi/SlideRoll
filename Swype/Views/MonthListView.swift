@@ -33,7 +33,7 @@ struct MonthListView: View {
             }
             .animation(.spring(response: 0.4, dampingFraction: 0.8), value: vm.toDeleteIDs.count)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { navHeader }
+            .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showTrash) {
                 TrashView().environment(vm).environment(lm)
             }
@@ -60,29 +60,18 @@ struct MonthListView: View {
         }
     }
 
-    // MARK: Nav
-
-    private var navHeader: some ToolbarContent {
-        ToolbarItem(placement: .principal) {
-            HStack(spacing: 8) {
-                Image(systemName: "photo.stack.fill")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(Theme.accentGradient)
-                Text("Swype")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundStyle(Theme.textPrimary)
-            }
-        }
-    }
-
     // MARK: Year List
 
     private var yearList: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
-                summaryHeader
+                inlineHeader
                     .padding(.horizontal, 24)
                     .padding(.top, 8)
+                    .padding(.bottom, 16)
+
+                summaryHeader
+                    .padding(.horizontal, 24)
                     .padding(.bottom, 24)
 
                 LazyVStack(spacing: 14) {
@@ -98,6 +87,24 @@ struct MonthListView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, vm.toDeleteIDs.isEmpty ? 76 : 152)
             }
+        }
+    }
+
+    // MARK: Inline Header
+
+    private var inlineHeader: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image("SplashIcon")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 36, height: 36)
+                .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+
+            Text("Swype")
+                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .foregroundStyle(Theme.textPrimary)
+
+            Spacer()
         }
     }
 
