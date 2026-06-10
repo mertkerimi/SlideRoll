@@ -4,25 +4,34 @@
 
 ---
 
-## Özellikler
+## Ekran Görüntüleri
 
-- **Tinder Benzeri Kaydırma** — Sağa kaydır: tut, Sola kaydır: sil, Yukarı kaydır: sonraya bırak
-- **Yıl & Ay Grupları** — Fotoğraflar otomatik olarak yıla ve aya göre gruplandırılır
-- **İlerleme Takibi** — Her ay ve yıl için detaylı inceleme istatistikleri
-- **Silinecekler Merkezi** — Silinmek üzere işaretlenen fotoğrafları tek ekranda yönet
-- **Geri Al** — Yanlış kaydırmaları anında geri al
-- **Tam Ekran Önizleme** — Fotoğrafa dokun, tam boyutunu gör; pinch ile zoom yap
-- **Kalıcı İlerleme** — Uygulamayı kapatsanız bile kaldığınız yerden devam edin
-- **50.000+ Fotoğraf Desteği** — Lazy loading ve thumbnail cache ile akıcı performans
-- **Dark / Light Mode** — Sistem temasına otomatik uyum
+<p align="center">
+  <img src="Screenshots/home.png" width="30%" alt="Ana Ekran" />
+  <img src="Screenshots/months.png" width="30%" alt="Ay Listesi" />
+  <img src="Screenshots/review.png" width="30%" alt="İnceleme Ekranı" />
+</p>
+
+<p align="center">
+  <em>Ana Ekran &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Ay Listesi &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Kart İnceleme</em>
+</p>
 
 ---
 
-## Ekran Görüntüleri
+## Özellikler
 
-| Ana Ekran | Ay İnceleme | Kart Kaydırma | Silinecekler |
-|-----------|-------------|---------------|--------------|
-| Yıl bazlı gruplar ve ilerleme | Ay bazlı detaylar | Swipe ile hızlı karar | Toplu silme merkezi |
+- **Kart Kaydırma** — Sağa: tut, Sola: sil, Yukarı: sonraya bırak
+- **Yıl & Ay Grupları** — Fotoğraflar otomatik olarak yıl ve aya göre gruplandırılır
+- **İlerleme Takibi** — Yıl ve ay bazında detaylı inceleme istatistikleri
+- **Karışık İnceleme** — Tüm fotoğrafları karışık sırayla incele
+- **Zoom** — 2 parmakla 4x'e kadar zoom; fotoğrafa dokun → geri al
+- **Alan Tasarrufu Çubuğu** — İnceleme ekranında anlık kazanılan alan gösterimi
+- **Kütüphane İstatistikleri** — Depolama dağılımı, en büyük fotoğraflar, yıllık grafik
+- **Silinecekler Merkezi** — İşaretlenen fotoğrafları toplu yönet ve kalıcı sil
+- **Çok Dil** — Türkçe, İngilizce, Almanca
+- **5 Renk Teması** — Mavi, Mor, Mint, Turuncu, Pembe
+- **Dark / Light Mode** — Sistem temasına otomatik uyum
+- **Kalıcı İlerleme** — Uygulamayı kapatsanız bile kaldığınız yerden devam
 
 ---
 
@@ -32,7 +41,7 @@
    ```bash
    git clone https://github.com/mertkerimi/Swype.git
    ```
-2. `PhotoCleaner.xcodeproj` dosyasını Xcode ile açın
+2. `Swype.xcodeproj` dosyasını Xcode ile açın
 3. Gerçek bir iPhone'a veya simülatöre build edin (`⌘R`)
 4. Fotoğraflar iznini verin ve kullanmaya başlayın
 
@@ -43,11 +52,12 @@
 ## Nasıl Kullanılır
 
 1. Uygulamayı açın ve fotoğraflara erişim izni verin
-2. Yıl → Ay seçin
-3. Fotoğrafları kaydırarak değerlendirin:
-   - **→ Sağ:** Tut
-   - **← Sol:** Sil
-   - **↑ Yukarı:** Sonraya bırak
+2. Ana ekrandan yıl → ay seçin
+3. Fotoğrafları kaydırarak veya butonlarla değerlendirin:
+   - **→ Sağ / ✓:** Tut
+   - **← Sol / ✗:** Sil
+   - **↑ Yukarı / ⏰:** Sonraya bırak
+   - **Fotoğrafa dokun:** Son kararı geri al
 4. Silinecekler ekranından fotoğrafları kalıcı olarak silin
 
 ---
@@ -55,10 +65,11 @@
 ## Teknoloji
 
 - **SwiftUI** — Tüm arayüz
-- **Photos Framework** — Fotoğraf erişimi ve silme
+- **Photos Framework** — Fotoğraf erişimi, silme, favori
 - **PHCachingImageManager** — Performanslı görsel yükleme
+- **AVKit** — Video oynatma
 - **Swift Observation (@Observable)** — State yönetimi
-- **UserDefaults** — İlerleme kalıcılığı
+- **UserDefaults** — İlerleme ve ayar kalıcılığı
 
 ---
 
