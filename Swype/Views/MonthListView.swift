@@ -262,7 +262,7 @@ struct YearCard: View {
                     Text(year.title)
                         .font(.system(size: 26, weight: .bold, design: .rounded))
                         .foregroundStyle(Theme.textPrimary)
-                    Text(s.monthsAndPhotos(months: year.months.count, photos: year.total))
+                    Text(s.monthsPhotosAndVideos(months: year.months.count, photos: year.photoCount, videos: year.videoCount))
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Theme.textSecondary)
                 }
@@ -378,6 +378,7 @@ struct YearCard: View {
         year.isCompleted ? Theme.greenGradient :
         (year.progress > 0.5 ? Theme.accentGradient : Theme.orangeGradient)
     }
+
 }
 
 // MARK: - Months for Year
@@ -489,7 +490,7 @@ struct MonthCard: View {
                     Text(lm.s.monthTitle(from: group.id))
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(Theme.textPrimary)
-                    Text(s.photosReviewedOf(reviewed: group.reviewed, total: group.total))
+                    Text(s.photosReviewedOfWithVideos(reviewed: group.reviewed, total: group.total, videos: group.videoCount))
                         .font(.system(size: 12))
                         .foregroundStyle(Theme.textSecondary)
                 }
