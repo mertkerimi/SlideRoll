@@ -49,6 +49,7 @@ struct AppTourOverlay: View {
     @Environment(LanguageManager.self) var lm
     @State private var stepIndex = 0
     @State private var appeared = false
+    @State private var isNavigating = false
 
     private var steps: [TourStep] {
         let s = lm.s
@@ -68,7 +69,7 @@ struct AppTourOverlay: View {
         ZStack(alignment: .topLeading) {
             spotlightCanvas(frame: frame, target: step.target)
                 .ignoresSafeArea()
-                .onTapGesture { advance() }
+                .onTapGesture { if !isNavigating { advance() } }
 
             if frame != .zero {
                 let borderRadius: CGFloat = step.target == .tabBar ? 32 : 22
@@ -87,6 +88,8 @@ struct AppTourOverlay: View {
                                  anchor: step.tipBelow ? .top : .bottom)
             }
         }
+        .opacity(isNavigating ? 0 : 1)
+        .animation(.easeInOut(duration: 0.2), value: isNavigating)
         .animation(.spring(response: 0.4, dampingFraction: 0.75), value: appeared)
         .animation(.spring(response: 0.4, dampingFraction: 0.75), value: stepIndex)
         .onAppear {
@@ -97,13 +100,7 @@ struct AppTourOverlay: View {
     // Limit highlight area so it never covers too much screen
     private func clampedFrame(_ frame: CGRect, for target: TourTarget) -> CGRect {
         guard frame != .zero else { return frame }
-        switch target {
-        case .monthCards:
-            return CGRect(x: frame.minX, y: frame.minY,
-                          width: frame.width, height: min(frame.height, 120))
-        default:
-            return frame
-        }
+        return frame
     }
 
     // MARK: - Spotlight Canvas
@@ -223,14 +220,24 @@ struct AppTourOverlay: View {
     // MARK: - Navigation
 
     private func advance() {
-        appeared = false
-        // Step index 2 = yearCards → advancing to monthCards, trigger navigation first
-        let navigatingToMonths = (stepIndex == 2)
-        if navigatingToMonths {
+        // Step index 2 = yearCards → advancing to monthCards, navigate first
+        if stepIndex == 2 {
+            appeared = false
+            isNavigating = true
             NotificationCenter.default.post(name: .tourNavigateToFirstYear, object: nil)
+            // Wait for navigation slide animation to fully complete, then show step 4
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
+                stepIndex += 1
+                isNavigating = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    appeared = true
+                }
+            }
+            return
         }
-        let delay: TimeInterval = navigatingToMonths ? 0.85 : 0.15
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+
+        appeared = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
             if stepIndex < steps.count - 1 {
                 stepIndex += 1
                 appeared = true
