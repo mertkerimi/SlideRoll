@@ -45,11 +45,8 @@ struct ReviewView: View {
         }
         .onAppear {
             setupPending()
-            if !hasSeenReviewTutorial {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                    showTutorial = true
-                    hasSeenReviewTutorial = true
-                }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                showTutorial = true
             }
         }
         .task {

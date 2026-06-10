@@ -418,12 +418,14 @@ struct MonthsForYearView: View {
 
             ScrollView(showsIndicators: false) {
                 LazyVStack(spacing: 10) {
-                    ForEach(currentYear?.months ?? year.months) { group in
+                    ForEach(Array((currentYear?.months ?? year.months).enumerated()), id: \.element.id) { index, group in
                         MonthCard(group: group).environment(lm)
                             .onTapGesture { selectedGroup = group }
+                            .anchorPreference(key: TourAnchorKey.self, value: .bounds) { anchor in
+                                index == 0 ? [.monthCards: anchor] : [:]
+                            }
                     }
                 }
-                .tourAnchor(.monthCards)
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
                 .padding(.bottom, vm.toDeleteIDs.isEmpty ? 76 : 152)
