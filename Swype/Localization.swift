@@ -166,6 +166,40 @@ struct Strings {
         "\(n) Fotos werden dauerhaft von Ihrem Gerät gelöscht."
     )}
 
+    // MARK: - Onboarding
+    var onboardingSkip: String  { pick("Atla",   "Skip",        "Überspringen") }
+    var onboardingNext: String  { pick("Devam",  "Next",        "Weiter") }
+    var onboardingStart: String { pick("Başla",  "Get Started", "Loslegen") }
+
+    var ob1Title: String { pick("Swype'a Hoş Geldin", "Welcome to Swype", "Willkommen bei Swype") }
+    var ob1Desc: String  { pick(
+        "Binlerce fotoğraf ve videoyu hızlıca\ngözden geçir, düzenle ve temizle.",
+        "Quickly review, organize and clean\nthousands of photos and videos.",
+        "Tausende Fotos und Videos schnell\ndurchsehen, sortieren und bereinigen."
+    )}
+
+    var ob2Title: String { pick("Nasıl Kullanılır?", "How It Works", "So funktioniert's") }
+    var ob2Desc: String  { pick(
+        "Fotoğrafları kaydırarak saniyeler içinde\nkütüphaneni düzenle.",
+        "Swipe photos to organize your library\nin seconds.",
+        "Wische Fotos und sortiere deine\nMediathek in Sekunden."
+    )}
+    var ob2Keep: String   { pick("Sağa: Tut",   "Right: Keep",  "Rechts: Behalten") }
+    var ob2Delete: String { pick("Sola: Sil",   "Left: Delete", "Links: Löschen") }
+    var ob2Skip: String   { pick("Yukarı: Sonra", "Up: Later",  "Oben: Später") }
+
+    var ob3Title: String { pick("Daha Fazlası", "More Features", "Weitere Funktionen") }
+    var ob3Feat1Title: String { pick("Videolar Dahil",     "Videos Included",  "Videos inklusive") }
+    var ob3Feat1Desc: String  { pick("Fotoğraf ve videolarını\naynı akışta incele.", "Review photos and videos\nin the same flow.", "Fotos und Videos im\nselben Ablauf prüfen.") }
+    var ob3Feat2Title: String { pick("Favorile",           "Favorites",        "Favoriten") }
+    var ob3Feat2Desc: String  { pick("Kalp ikonuna dokunarak\nfavorilere ekle.", "Tap the heart icon to\nadd to favorites.", "Tippe das Herz-Symbol\num Favoriten hinzuzufügen.") }
+    var ob3Feat3Title: String { pick("Paylaş",             "Share",            "Teilen") }
+    var ob3Feat3Desc: String  { pick("Paylaşım ikonuyla\ndirekt paylaş.", "Share directly with\nthe share icon.", "Direkt teilen mit\ndem Teilen-Symbol.") }
+
+    // Review tutorial
+    var tutorialTitle: String { pick("Nasıl İncelenir?", "How to Review", "Wie zu prüfen?") }
+    var tutorialDismiss: String { pick("Anladım!", "Got it!", "Verstanden!") }
+
     // MARK: - Tab bar
     var tabHome: String     { pick("Ana Sayfa", "Home",     "Startseite") }
     var tabStats: String    { pick("Kütüphane", "Library",  "Mediathek") }
