@@ -6,11 +6,17 @@ struct ContentView: View {
     @Environment(LanguageManager.self) var lm
 
     @State private var showSplash = true
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
 
     var body: some View {
         ZStack {
             if showSplash {
                 SplashView { showSplash = false }
+                    .transition(.opacity)
+                    .zIndex(2)
+            } else if !hasSeenOnboarding {
+                OnboardingView { hasSeenOnboarding = true }
+                    .environment(lm)
                     .transition(.opacity)
                     .zIndex(1)
             } else {
@@ -18,7 +24,8 @@ struct ContentView: View {
                     .transition(.opacity)
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: showSplash)
+        .animation(.easeInOut(duration: 0.35), value: showSplash)
+        .animation(.easeInOut(duration: 0.35), value: hasSeenOnboarding)
     }
 
     @ViewBuilder

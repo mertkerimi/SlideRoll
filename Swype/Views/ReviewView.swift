@@ -14,6 +14,9 @@ struct ReviewView: View {
     @State private var groupTotalBytes: Int64 = 0
     @State private var cachedDeletedBytes: Int64 = 0
 
+    @AppStorage("hasSeenReviewTutorial") private var hasSeenReviewTutorial = false
+    @State private var showTutorial = false
+
     private var currentGroup: MonthGroup? {
         vm.monthGroups.first(where: { $0.id == group.id })
     }
@@ -40,10 +43,28 @@ struct ReviewView: View {
         .sheet(isPresented: $showTrash) {
             TrashView().environment(vm).environment(lm)
         }
-        .onAppear { setupPending() }
+        .onAppear {
+            setupPending()
+            if !hasSeenReviewTutorial {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    showTutorial = true
+                    hasSeenReviewTutorial = true
+                }
+            }
+        }
         .task {
             groupTotalBytes = await vm.totalBytes(in: group.id)
         }
+        .overlay {
+            if showTutorial {
+                ReviewTutorialOverlay(onDismiss: {
+                    withAnimation(.easeInOut(duration: 0.3)) { showTutorial = false }
+                })
+                .environment(lm)
+                .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: showTutorial)
     }
 
     private var backgroundGlows: some View {
