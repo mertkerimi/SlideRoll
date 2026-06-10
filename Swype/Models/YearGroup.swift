@@ -1,6 +1,9 @@
 import Foundation
 
-struct YearGroup: Identifiable {
+struct YearGroup: Identifiable, Hashable {
+    static func == (lhs: YearGroup, rhs: YearGroup) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+
     let id: String  // "2026"
     let title: String
     var months: [MonthGroup]

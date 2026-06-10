@@ -7,9 +7,10 @@ struct MonthListView: View {
     @Environment(LanguageManager.self) var lm
     @State private var showTrash = false
     @State private var showShuffle = false
+    @State private var navPath: [YearGroup] = []
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navPath) {
             ZStack(alignment: .bottom) {
                 Theme.bg.ignoresSafeArea()
 
@@ -34,11 +35,19 @@ struct MonthListView: View {
             .animation(.spring(response: 0.4, dampingFraction: 0.8), value: vm.toDeleteIDs.count)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(for: YearGroup.self) { year in
+                MonthsForYearView(year: year).environment(vm).environment(lm)
+            }
             .sheet(isPresented: $showTrash) {
                 TrashView().environment(vm).environment(lm)
             }
             .fullScreenCover(isPresented: $showShuffle) {
                 GlobalReviewView().environment(vm).environment(lm)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .tourNavigateToFirstYear)) { _ in
+                if let firstYear = vm.yearGroups.first {
+                    navPath = [firstYear]
+                }
             }
         }
     }
@@ -75,13 +84,14 @@ struct MonthListView: View {
                     .padding(.bottom, 24)
 
                 LazyVStack(spacing: 14) {
-                    ForEach(vm.yearGroups) { year in
-                        NavigationLink(destination:
-                            MonthsForYearView(year: year).environment(vm).environment(lm)
-                        ) {
+                    ForEach(Array(vm.yearGroups.enumerated()), id: \.element.id) { index, year in
+                        NavigationLink(value: year) {
                             YearCard(year: year).environment(lm)
                         }
                         .buttonStyle(.plain)
+                        .anchorPreference(key: TourAnchorKey.self, value: .bounds) { anchor in
+                            index == 0 ? [.yearCards: anchor] : [:]
+                        }
                     }
                 }
                 .padding(.horizontal, 20)
@@ -172,6 +182,7 @@ struct MonthListView: View {
                 .fill(Theme.surface)
                 .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.border, lineWidth: 1))
         )
+        .tourAnchor(.summaryCard)
     }
 
     private func summaryChip(value: String, label: String, color: Color) -> some View {
@@ -412,6 +423,7 @@ struct MonthsForYearView: View {
                             .onTapGesture { selectedGroup = group }
                     }
                 }
+                .tourAnchor(.monthCards)
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
                 .padding(.bottom, vm.toDeleteIDs.isEmpty ? 76 : 152)

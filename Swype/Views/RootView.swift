@@ -9,14 +9,20 @@ struct RootView: View {
     @Environment(LanguageManager.self) var lm
 
     @State private var selectedTab: AppTab = .home
+    @AppStorage("hasSeenAppTour") private var hasSeenAppTour = false
+    @State private var showTour = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            // Tab content — .id forces full re-render on theme change
             Group {
                 switch selectedTab {
                 case .home:
                     MonthListView()
+                        .onAppear {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                                showTour = true
+                            }
+                        }
                 case .stats:
                     NavigationStack {
                         StatsView()
@@ -46,11 +52,27 @@ struct RootView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .id(lm.themeVersion)
 
-            // Floating tab bar — only on root level (not inside NavigationStack detail screens)
             floatingTabBar
                 .padding(.bottom, 24)
         }
         .ignoresSafeArea(edges: .bottom)
+        .overlayPreferenceValue(TourAnchorKey.self) { anchors in
+            if showTour {
+                GeometryReader { proxy in
+                    AppTourOverlay(
+                        anchors: anchors,
+                        proxy: proxy,
+                        onFinish: {
+                            withAnimation(.easeInOut(duration: 0.3)) { showTour = false }
+                        }
+                    )
+                    .environment(lm)
+                }
+                .ignoresSafeArea()
+                .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: showTour)
     }
 
     // MARK: - Floating Tab Bar
@@ -72,6 +94,7 @@ struct RootView: View {
                 )
                 .shadow(color: .black.opacity(0.25), radius: 24, y: 8)
         )
+        .tourAnchor(.tabBar)
         .padding(.horizontal, 48)
     }
 

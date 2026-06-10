@@ -197,8 +197,34 @@ struct Strings {
     var ob3Feat3Desc: String  { pick("Paylaşım ikonuyla\ndirekt paylaş.", "Share directly with\nthe share icon.", "Direkt teilen mit\ndem Teilen-Symbol.") }
 
     // Review tutorial
-    var tutorialTitle: String { pick("Nasıl İncelenir?", "How to Review", "Wie zu prüfen?") }
-    var tutorialDismiss: String { pick("Anladım!", "Got it!", "Verstanden!") }
+    var tutorialTitle: String   { pick("Nasıl İncelenir?", "How to Review",  "Wie zu prüfen?") }
+    var tutorialDismiss: String { pick("Anladım!",         "Got it!",         "Verstanden!") }
+
+    // App tour steps
+    var tourStep1Title: String { pick("Genel İlerleme",       "Overall Progress",    "Gesamtfortschritt") }
+    var tourStep1Desc: String  { pick(
+        "Toplam incelenen medya sayını, silinecekleri ve yıllara göre dağılımı buradan takip et.",
+        "Track your total reviewed media, items to delete, and yearly breakdown here.",
+        "Verfolge deinen Fortschritt, zu löschende Elemente und die jährliche Aufschlüsselung hier."
+    )}
+    var tourStep2Title: String { pick("Yıl & Ay Bazlı Medyalar", "Media by Year & Month", "Medien nach Jahr & Monat") }
+    var tourStep2Desc: String  { pick(
+        "Fotoğraf ve videoların yıl ve aylara göre gruplanmış. Bir yıla dokun, aylara geç.",
+        "Your photos and videos are grouped by year and month. Tap a year to see months.",
+        "Fotos und Videos sind nach Jahr und Monat gruppiert. Tippe ein Jahr an."
+    )}
+    var tourStep3Title: String { pick("Aylık Görünüm",    "Monthly View",      "Monatsansicht") }
+    var tourStep3Desc: String  { pick(
+        "Her ay kaç fotoğraf ve video olduğunu buradan görürsün. Bir aya dokunarak incelemeye başlayabilirsin.",
+        "See how many photos and videos each month contains. Tap any month to start reviewing.",
+        "Sieh, wie viele Fotos und Videos jeder Monat enthält. Tippe einen Monat an, um zu beginnen."
+    )}
+    var tourStep4Title: String { pick("Sekmeler",          "Tabs",                "Registerkarten") }
+    var tourStep4Desc: String  { pick(
+        "Kütüphane sekmesinde depolama istatistiklerini, Ayarlar sekmesinde uygulama ayarlarını bulabilirsin.",
+        "Find storage stats in the Library tab and app settings in the Settings tab.",
+        "Speicherstatistiken im Mediathek-Tab, App-Einstellungen im Einstellungen-Tab."
+    )}
 
     // MARK: - Tab bar
     var tabHome: String     { pick("Ana Sayfa", "Home",     "Startseite") }
