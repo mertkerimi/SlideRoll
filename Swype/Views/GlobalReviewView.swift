@@ -3,6 +3,7 @@ import SwiftUI
 struct GlobalReviewView: View {
     @Environment(PhotoLibraryViewModel.self) var vm
     @Environment(LanguageManager.self) var lm
+    @Environment(AdManager.self) var adManager
     @Environment(\.dismiss) var dismiss
 
     @State private var pendingIDs: [String] = []
@@ -10,6 +11,7 @@ struct GlobalReviewView: View {
     @State private var decisionHistory: [(id: String, decision: PhotoDecision)] = []
     @State private var cardID = UUID()
     @State private var showTrash = false
+    @State private var swipeCount = 0
 
     private var isFinished: Bool { pendingIDs.isEmpty || currentIndex >= pendingIDs.count }
     private var keepCount: Int   { vm.monthGroups.reduce(0) { $0 + $1.decisions.values.filter { $0 == .keep }.count } }
@@ -283,8 +285,16 @@ struct GlobalReviewView: View {
         decisionHistory.append((id: photoID, decision: decision))
         vm.startCaching(ids: Array(pendingIDs.dropFirst(currentIndex + 1).prefix(8)),
                         targetSize: CGSize(width: 700, height: 900))
-        withAnimation(.easeInOut(duration: 0.1)) { currentIndex += 1 }
+        let nextIndex = currentIndex + 1
+        withAnimation(.easeInOut(duration: 0.1)) { currentIndex = nextIndex }
         cardID = UUID()
+        swipeCount += 1
+        let shouldShowAd = swipeCount % 10 == 0 || nextIndex >= pendingIDs.count
+        if shouldShowAd {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                adManager.showIfReady()
+            }
+        }
     }
 
     private func undoLast() {
