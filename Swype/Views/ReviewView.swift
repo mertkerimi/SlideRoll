@@ -4,6 +4,7 @@ struct ReviewView: View {
     let group: MonthGroup
     @Environment(PhotoLibraryViewModel.self) var vm
     @Environment(LanguageManager.self) var lm
+    @Environment(AdManager.self) var adManager
     @Environment(\.dismiss) var dismiss
 
     @State private var pendingIDs: [String] = []
@@ -12,6 +13,7 @@ struct ReviewView: View {
     @State private var cardID = UUID()
     @State private var showTrash = false
     @State private var showBrowse = false
+    @State private var swipeCount = 0
     @State private var groupTotalBytes: Int64 = 0
     @State private var cachedDeletedBytes: Int64 = 0
 
@@ -431,9 +433,17 @@ struct ReviewView: View {
         decisionHistory.append((id: photoID, decision: decision))
         vm.startCaching(ids: Array(pendingIDs.dropFirst(currentIndex + 1).prefix(8)),
                         targetSize: CGSize(width: 700, height: 900))
-        withAnimation(.easeInOut(duration: 0.1)) { currentIndex += 1 }
+        let nextIndex = currentIndex + 1
+        withAnimation(.easeInOut(duration: 0.1)) { currentIndex = nextIndex }
         cardID = UUID()
         refreshDeletedBytes()
+        swipeCount += 1
+        let shouldShowAd = swipeCount % 10 == 0 || nextIndex >= pendingIDs.count
+        if shouldShowAd {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                adManager.showIfReady()
+            }
+        }
     }
 
     private func undoLast() {
