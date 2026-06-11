@@ -30,6 +30,9 @@ struct Strings {
     // MARK: - Common
     var close: String        { pick("Kapat",  "Close",  "Schließen") }
     var cancel: String       { pick("İptal",  "Cancel", "Abbrechen") }
+    var selectAll: String    { pick("Tümünü Seç", "Select All", "Alle auswählen") }
+    var cancelAllDeletes: String { pick("Silmekten Vazgeç", "Undo All Deletes", "Alle Löschungen rückgängig") }
+    var cancelAllDeletesHint: String { pick("Tüm fotoğraflar silinecekler listesinden çıkarılır.", "All photos will be removed from the delete list.", "Alle Fotos werden aus der Löschliste entfernt.") }
     var ok: String           { pick("Tamam",  "OK",     "OK") }
     var done: String         { pick("Tamam",  "Done",   "Fertig") }
     var error: String        { pick("Hata",   "Error",  "Fehler") }
@@ -128,6 +131,8 @@ struct Strings {
     )}
     var keptDone: String    { pick("Tutuldu",  "Kept",    "Behalten") }
     var skippedDone: String { pick("Atlandı",  "Skipped", "Übersprungen") }
+    var browsePhotos: String { pick("Fotoğrafları Gör", "Browse Photos", "Fotos anzeigen") }
+    var restartReview: String { pick("Yeniden Başla", "Restart", "Neu starten") }
 
     // MARK: - Card badges
     var keepBadge: String   { pick("TUT",   "KEEP",   "BEHALTEN") }
@@ -248,6 +253,7 @@ struct Strings {
     var statDuplicates: String  { pick("Olası Kopya","Duplicates", "Duplikate") }
     var statByYear: String          { pick("Yıllara Göre Depolama", "Storage by Year", "Speicher nach Jahr") }
     var statLargestPhotos: String   { pick("En Büyük Fotoğraflar", "Largest Photos", "Größte Fotos") }
+    var statLargestVideos: String   { pick("En Büyük Videolar", "Largest Videos", "Größte Videos") }
 
     // MARK: - Duplicates
     var dupTitle: String        { pick("Olası Kopyalar",    "Potential Duplicates", "Mögliche Duplikate") }

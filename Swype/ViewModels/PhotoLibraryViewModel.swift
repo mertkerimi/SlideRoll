@@ -33,6 +33,7 @@ class PhotoLibraryViewModel {
         }.count
     }
     var statsLoading = false
+    private var statsLoaded = false
 
     // Trash size — computed on demand
     var trashBytes: Int64 {
@@ -240,6 +241,16 @@ class PhotoLibraryViewModel {
         toDeleteIDs.removeAll { $0 == photoID }
     }
 
+    func resetGroupDecisions(groupID: String) {
+        guard let idx = monthGroups.firstIndex(where: { $0.id == groupID }) else { return }
+        let photoIDs = monthGroups[idx].photoIDs
+        toDeleteIDs.removeAll { photoIDs.contains($0) }
+        monthGroups[idx].decisions = [:]
+        var saved = savedDecisions
+        for id in photoIDs { saved.removeValue(forKey: id) }
+        savedDecisions = saved
+    }
+
     // Applies a decision without knowing the group — searches all groups
     func applyDecisionGlobal(_ decision: PhotoDecision, to photoID: String) {
         guard let idx = monthGroups.firstIndex(where: { $0.photoIDs.contains(photoID) }) else { return }
@@ -296,6 +307,11 @@ class PhotoLibraryViewModel {
         }
     }
 
+    func removeAllFromTrash() {
+        let ids = toDeleteIDs
+        for id in ids { removeFromTrash(photoID: id) }
+    }
+
     func permanentlyDeleteTrash() async throws {
         let ids = toDeleteIDs
         let assets = ids.compactMap { allAssets[$0] }
@@ -336,24 +352,28 @@ class PhotoLibraryViewModel {
     }
 
     func loadLibraryStats() async {
-        guard !statsLoading else { return }
+        guard !statsLoading && !statsLoaded else { return }
         statsLoading = true
 
-        let result = await Task.detached(priority: .userInitiated) {
-            let photoFetch = PHAsset.fetchAssets(with: .image, options: nil)
-            let videoFetch = PHAsset.fetchAssets(with: .video, options: nil)
+        // Phase 1: instant counts — PHFetchResult.count requires no enumeration
+        let photoFetch = PHAsset.fetchAssets(with: .image, options: nil)
+        let videoFetch = PHAsset.fetchAssets(with: .video, options: nil)
+        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+            photoCount = photoFetch.count
+            videoCount = videoFetch.count
+        }
 
+        // Phase 2: streaming enumeration — update top-5 + totals every 200 assets
+        await Task.detached(priority: .userInitiated) {
             var pBytes: Int64 = 0
             var vBytes: Int64 = 0
             var favorites = 0
             var yearMap: [String: Int64] = [:]
-            let dayFormatter = DateFormatter()
-            dayFormatter.dateFormat = "yyyy-MM-dd"
+            let dayFormatter = DateFormatter(); dayFormatter.dateFormat = "yyyy-MM-dd"
+            let yearFormatter = DateFormatter(); yearFormatter.dateFormat = "yyyy"
             var dayBuckets: [String: [(id: String, size: Int64)]] = [:]
-            let yearFormatter = DateFormatter()
-            yearFormatter.dateFormat = "yyyy"
-            // For largest photos: collect all with size + date
-            var allPhotoSizes: [(id: String, bytes: Int64, date: Date)] = []
+            var top5Photos: [(id: String, bytes: Int64, date: Date)] = []
+            var counter = 0
 
             photoFetch.enumerateObjects { asset, _, _ in
                 var size: Int64 = 0
@@ -362,17 +382,27 @@ class PhotoLibraryViewModel {
                 }
                 pBytes += size
                 if asset.isFavorite { favorites += 1 }
-
                 let date = asset.creationDate ?? Date.distantPast
-                let year = yearFormatter.string(from: date)
-                yearMap[year, default: 0] += size
+                yearMap[yearFormatter.string(from: date), default: 0] += size
+                dayBuckets[dayFormatter.string(from: date), default: []].append((id: asset.localIdentifier, size: size))
 
-                let day = dayFormatter.string(from: date)
-                dayBuckets[day, default: []].append((id: asset.localIdentifier, size: size))
-                allPhotoSizes.append((id: asset.localIdentifier, bytes: size, date: date))
+                // Keep running top-5
+                top5Photos.append((id: asset.localIdentifier, bytes: size, date: date))
+                if top5Photos.count > 5 {
+                    top5Photos.sort { $0.bytes > $1.bytes }
+                    top5Photos = Array(top5Photos.prefix(5))
+                }
+
+                counter += 1
+                if counter % 200 == 0 {
+                    let snapshot = top5Photos
+                    let pb = pBytes
+                    Task { @MainActor in self.largestPhotos = snapshot; self.photoBytes = pb }
+                }
             }
 
-            var allVideoSizes: [(id: String, bytes: Int64, date: Date, duration: TimeInterval)] = []
+            var top5Videos: [(id: String, bytes: Int64, date: Date, duration: TimeInterval)] = []
+            var vCounter = 0
             videoFetch.enumerateObjects { asset, _, _ in
                 var size: Int64 = 0
                 for resource in PHAssetResource.assetResources(for: asset) {
@@ -380,43 +410,45 @@ class PhotoLibraryViewModel {
                 }
                 vBytes += size
                 let date = asset.creationDate ?? Date.distantPast
-                let year = yearFormatter.string(from: date)
-                yearMap[year, default: 0] += size
-                allVideoSizes.append((id: asset.localIdentifier, bytes: size, date: date, duration: asset.duration))
-            }
+                yearMap[yearFormatter.string(from: date), default: 0] += size
 
-            // Find duplicates: same day, same file size → group them
-            var dupGroups: [[String]] = []
-            for (_, items) in dayBuckets {
-                // group by size
-                var sizeMap: [Int64: [String]] = [:]
-                for item in items { sizeMap[item.size, default: []].append(item.id) }
-                for (_, ids) in sizeMap where ids.count >= 2 {
-                    dupGroups.append(ids)
+                top5Videos.append((id: asset.localIdentifier, bytes: size, date: date, duration: asset.duration))
+                if top5Videos.count > 5 {
+                    top5Videos.sort { $0.bytes > $1.bytes }
+                    top5Videos = Array(top5Videos.prefix(5))
+                }
+
+                vCounter += 1
+                if vCounter % 100 == 0 {
+                    let snapshot = top5Videos
+                    let vb = vBytes
+                    Task { @MainActor in self.largestVideos = snapshot; self.videoBytes = vb }
                 }
             }
 
-            let yearly = yearMap
-                .map { (year: $0.key, bytes: $0.value) }
-                .sorted { $0.year > $1.year }
+            // Final results
+            var dupGroups: [[String]] = []
+            for (_, items) in dayBuckets {
+                var sizeMap: [Int64: [String]] = [:]
+                for item in items { sizeMap[item.size, default: []].append(item.id) }
+                for (_, ids) in sizeMap where ids.count >= 2 { dupGroups.append(ids) }
+            }
+            let yearly = yearMap.map { (year: $0.key, bytes: $0.value) }.sorted { $0.year > $1.year }
+            let finalPhotos = top5Photos.sorted { $0.bytes > $1.bytes }
+            let finalVideos = top5Videos.sorted { $0.bytes > $1.bytes }
 
-            // Top 5 largest photos & videos
-            let largestWithDates = Array(allPhotoSizes.sorted { $0.bytes > $1.bytes }.prefix(5))
-            let largestVids      = Array(allVideoSizes.sorted { $0.bytes > $1.bytes }.prefix(5))
-
-            return (photoFetch.count, videoFetch.count, pBytes, vBytes, favorites, dupGroups, yearly, largestWithDates, largestVids)
+            Task { @MainActor in
+                self.photoBytes      = pBytes
+                self.videoBytes      = vBytes
+                self.favoritesCount  = favorites
+                self.duplicateGroups = dupGroups
+                self.yearlyStorage   = yearly
+                self.largestPhotos   = finalPhotos
+                self.largestVideos   = finalVideos
+                self.statsLoading    = false
+                self.statsLoaded     = true
+            }
         }.value
-
-        photoCount      = result.0
-        videoCount      = result.1
-        photoBytes      = result.2
-        videoBytes      = result.3
-        favoritesCount  = result.4
-        duplicateGroups = result.5
-        yearlyStorage   = result.6
-        largestPhotos   = result.7
-        largestVideos   = result.8
-        statsLoading    = false
     }
 
     func startCaching(ids: [String], targetSize: CGSize) {

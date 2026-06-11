@@ -8,6 +8,7 @@ struct TrashView: View {
     @State private var showConfirm = false
     @State private var isDeleting = false
     @State private var deleteError: String?
+    @State private var allSelected = false
 
     private let columns = [
         GridItem(.flexible(), spacing: 6),
@@ -45,6 +46,17 @@ struct TrashView: View {
                 Button(s.close) { dismiss() }
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(Theme.textSecondary)
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                        allSelected.toggle()
+                    }
+                } label: {
+                    Text(allSelected ? s.cancel : s.selectAll)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(allSelected ? Theme.red : Theme.accent)
+                }
             }
         }
         .confirmationDialog(s.cannotUndo, isPresented: $showConfirm, titleVisibility: .visible) {
@@ -106,33 +118,64 @@ struct TrashView: View {
             .frame(height: 48)
 
             VStack(spacing: 10) {
-                Button { showConfirm = true } label: {
-                    Group {
-                        if isDeleting {
-                            HStack(spacing: 12) {
-                                ProgressView().tint(.white)
-                                Text(s.deleting).font(.system(size: 16, weight: .bold))
-                            }
-                        } else {
-                            HStack(spacing: 10) {
-                                Image(systemName: "trash.fill")
-                                    .font(.system(size: 16, weight: .bold))
-                                Text(s.permanentlyDeleteButton(vm.toDeleteIDs.count))
-                                    .font(.system(size: 16, weight: .bold))
+                if allSelected {
+                    // Silmekten Vazgeç
+                    Button {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                            vm.removeAllFromTrash()
+                            allSelected = false
+                            dismiss()
+                        }
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "arrow.uturn.backward")
+                                .font(.system(size: 16, weight: .bold))
+                            Text(s.cancelAllDeletes)
+                                .font(.system(size: 16, weight: .bold))
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 18)
+                        .background(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .fill(Theme.orange)
+                        )
+                        .shadow(color: Theme.orange.opacity(0.45), radius: 16, y: 8)
+                    }
+
+                    Text(s.cancelAllDeletesHint)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.textTertiary)
+                        .multilineTextAlignment(.center)
+                } else {
+                    Button { showConfirm = true } label: {
+                        Group {
+                            if isDeleting {
+                                HStack(spacing: 12) {
+                                    ProgressView().tint(.white)
+                                    Text(s.deleting).font(.system(size: 16, weight: .bold))
+                                }
+                            } else {
+                                HStack(spacing: 10) {
+                                    Image(systemName: "trash.fill")
+                                        .font(.system(size: 16, weight: .bold))
+                                    Text(s.permanentlyDeleteButton(vm.toDeleteIDs.count))
+                                        .font(.system(size: 16, weight: .bold))
+                                }
                             }
                         }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 18)
+                        .background(Theme.redGradient, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .shadow(color: Theme.red.opacity(0.45), radius: 16, y: 8)
                     }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 18)
-                    .background(Theme.redGradient, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    .shadow(color: Theme.red.opacity(0.45), radius: 16, y: 8)
-                }
-                .disabled(isDeleting)
+                    .disabled(isDeleting)
 
-                Text(s.cannotUndoShort)
-                    .font(.system(size: 12))
-                    .foregroundStyle(Theme.textTertiary)
+                    Text(s.cannotUndoShort)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.textTertiary)
+                }
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 36)

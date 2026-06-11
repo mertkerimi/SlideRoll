@@ -59,8 +59,12 @@ struct VideoPlayerSheet: View {
 
         let options = PHVideoRequestOptions()
         options.isNetworkAccessAllowed = true
-        options.deliveryMode = .highQualityFormat
+        options.deliveryMode = .automatic   // başlangıç için mevcut en iyi kaliteyi kullan
         options.version = .current
+        options.progressHandler = { progress, _, _, _ in
+            // iCloud indirme ilerliyor — loading spinner zaten gösteriliyor
+            _ = progress
+        }
 
         PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, info in
             DispatchQueue.main.async {
