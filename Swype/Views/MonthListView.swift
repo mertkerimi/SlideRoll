@@ -176,6 +176,22 @@ struct MonthListView: View {
                 .background(Theme.accent.opacity(0.10), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Theme.accent.opacity(0.20), lineWidth: 1))
             }
+
+            if vm.todayDecisionCount > 0 {
+                HStack(spacing: 8) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Theme.orange)
+                    Text(s.todayCount(vm.todayDecisionCount))
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Theme.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
         .padding(20)
         .background(
