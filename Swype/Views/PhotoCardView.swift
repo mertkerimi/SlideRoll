@@ -131,7 +131,7 @@ struct PhotoCardView: View {
         isVideoLoading = true
         let options = PHVideoRequestOptions()
         options.isNetworkAccessAllowed = true
-        options.deliveryMode = .highQualityFormat
+        options.deliveryMode = .automatic
         PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
             DispatchQueue.main.async {
                 guard let avAsset else { self.isVideoLoading = false; return }

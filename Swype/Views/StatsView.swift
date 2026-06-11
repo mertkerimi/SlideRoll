@@ -4,49 +4,23 @@ struct StatsView: View {
     @Environment(PhotoLibraryViewModel.self) var vm
     @Environment(LanguageManager.self) var lm
 
-    @State private var initialLoad = true
     @State private var showDuplicates = false
     @State private var selectedLargest: IdentifiablePhoto? = nil
-    private var isLoading: Bool { initialLoad || vm.statsLoading }
-
+    @State private var mediaTab = 0
     var body: some View {
         ZStack {
             Theme.bg.ignoresSafeArea()
             backgroundGlows
-
-            if isLoading {
-                loadingView.transition(.opacity)
-            } else {
-                content.transition(.opacity.combined(with: .scale(scale: 0.97)))
-            }
+            content
         }
-        .animation(.easeInOut(duration: 0.3), value: isLoading)
         .sheet(isPresented: $showDuplicates) {
             DuplicatesView().environment(vm).environment(lm)
         }
         .sheet(item: $selectedLargest) { photo in
-            LargestPhotoDetailView(photoID: photo.id, bytes: photo.bytes, date: photo.date)
+            LargestPhotoDetailView(photoID: photo.id, bytes: photo.bytes, date: photo.date, isVideo: photo.isVideo)
                 .environment(vm).environment(lm)
         }
-        .task { await vm.loadLibraryStats(); initialLoad = false }
-    }
-
-    // MARK: - Loading
-
-    private var loadingView: some View {
-        VStack(spacing: 24) {
-            ZStack {
-                Circle().fill(Theme.accent.opacity(0.12)).frame(width: 90, height: 90)
-                ProgressView().tint(Theme.accent).scaleEffect(1.5)
-            }
-            VStack(spacing: 8) {
-                Text(lm.s.statCalculating)
-                    .font(.system(size: 17, weight: .semibold)).foregroundStyle(Theme.textPrimary)
-                Text(lm.s.statCalculatingHint)
-                    .font(.system(size: 13)).foregroundStyle(Theme.textSecondary).multilineTextAlignment(.center)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .task { await vm.loadLibraryStats() }
     }
 
     // MARK: - Content
@@ -54,7 +28,7 @@ struct StatsView: View {
     private var content: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 16) {
-                // Media row
+                // Media count cards — appear instantly (Phase 1)
                 HStack(spacing: 12) {
                     mediaCard(icon: "photo.fill", iconColor: Theme.accent,
                               title: lm.s.statPhotos, count: vm.photoCount, bytes: vm.photoBytes)
@@ -62,56 +36,117 @@ struct StatsView: View {
                               title: lm.s.statVideos, count: vm.videoCount, bytes: vm.videoBytes)
                 }
 
-                // Largest photos section
-                if !vm.largestPhotos.isEmpty {
-                    largestPhotosCard
+                // Largest section — appears as soon as first 200 assets scanned
+                if !vm.largestPhotos.isEmpty || !vm.largestVideos.isEmpty {
+                    largestMediaCard
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }
 
-                // Year chart
-                if !vm.yearlyStorage.isEmpty {
-                    yearChartCard
+                // Year chart + progress — appear when fully done
+                if !vm.statsLoading {
+                    if !vm.yearlyStorage.isEmpty {
+                        yearChartCard
+                            .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    }
+                    swypeCard
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                } else {
+                    HStack(spacing: 8) {
+                        ProgressView().tint(Theme.accent).scaleEffect(0.75)
+                        Text(lm.s.statCalculating)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .transition(.opacity)
                 }
-
-                // Swype progress
-                swypeCard
             }
+            .animation(.easeInOut(duration: 0.4), value: vm.statsLoading)
             .padding(.horizontal, 20)
             .padding(.top, 8)
             .padding(.bottom, 100)
         }
     }
 
-    // MARK: - Largest Photos Card
+    // MARK: - Largest Media Card (tabbed)
 
-    private var largestPhotosCard: some View {
-        let items = vm.largestPhotos.map { IdentifiablePhoto(id: $0.id, bytes: $0.bytes, date: $0.date) }
-
-        return VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 6) {
-                Image(systemName: "photo.stack.fill")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Theme.accent)
-                Text(lm.s.statLargestPhotos)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Theme.textSecondary)
+    private var largestMediaCard: some View {
+        VStack(spacing: 12) {
+            // Tab picker
+            HStack(spacing: 0) {
+                tabButton(title: lm.s.statLargestPhotos, index: 0)
+                tabButton(title: lm.s.statLargestVideos, index: 1)
             }
+            .padding(4)
+            .background(Theme.surfaceHigh, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
 
-            VStack(spacing: 10) {
-                ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-                    Button { selectedLargest = item } label: {
-                        LargestPhotoRow(photoID: item.id, bytes: item.bytes, date: item.date)
-                            .environment(vm)
-                            .environment(lm)
+            // Rows
+            if mediaTab == 0 {
+                if vm.largestPhotos.isEmpty {
+                    emptyLabel
+                } else {
+                    VStack(spacing: 8) {
+                        ForEach(vm.largestPhotos, id: \.id) { item in
+                            let photo = IdentifiablePhoto(id: item.id, bytes: item.bytes, date: item.date)
+                            Button { selectedLargest = photo } label: {
+                                LargestPhotoRow(photoID: item.id, bytes: item.bytes, date: item.date)
+                                    .environment(vm).environment(lm)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
-                    .buttonStyle(.plain)
+                }
+            } else {
+                if vm.largestVideos.isEmpty {
+                    emptyLabel
+                } else {
+                    VStack(spacing: 8) {
+                        ForEach(vm.largestVideos, id: \.id) { item in
+                            let media = IdentifiablePhoto(id: item.id, bytes: item.bytes, date: item.date, isVideo: true)
+                            Button { selectedLargest = media } label: {
+                                LargestPhotoRow(photoID: item.id, bytes: item.bytes, date: item.date,
+                                                isVideo: true, duration: item.duration)
+                                    .environment(vm).environment(lm)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
                 }
             }
         }
-        .padding(20)
+        .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Theme.surface)
                 .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.border, lineWidth: 1))
         )
+    }
+
+    private func tabButton(title: String, index: Int) -> some View {
+        let selected = mediaTab == index
+        return Button {
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.75)) { mediaTab = index }
+        } label: {
+            Text(title)
+                .font(.system(size: 14, weight: selected ? .bold : .medium))
+                .foregroundStyle(selected ? Theme.textPrimary : Theme.textSecondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 9)
+                .background(
+                    selected
+                        ? AnyView(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.surface))
+                        : AnyView(Color.clear)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var emptyLabel: some View {
+        Text("—")
+            .font(.system(size: 13))
+            .foregroundStyle(Theme.textTertiary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
     }
 
     // MARK: - Media Card (half width)
@@ -123,11 +158,16 @@ struct StatsView: View {
                 Image(systemName: icon).font(.system(size: 17, weight: .semibold)).foregroundStyle(iconColor)
             }
             VStack(alignment: .leading, spacing: 3) {
-                Text(formatBytes(bytes))
+                Text(bytes > 0 ? formatBytes(bytes) : "—")
                     .font(.system(size: 22, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.textPrimary)
+                    .contentTransition(.numericText())
+                    .animation(.spring(response: 0.5, dampingFraction: 0.8), value: bytes)
                 Text(title).font(.system(size: 12, weight: .medium)).foregroundStyle(Theme.textSecondary)
-                Text(lm.s.statItemCount(count)).font(.system(size: 11)).foregroundStyle(Theme.textTertiary)
+                Text(count > 0 ? lm.s.statItemCount(count) : "—")
+                    .font(.system(size: 11)).foregroundStyle(Theme.textTertiary)
+                    .contentTransition(.numericText())
+                    .animation(.spring(response: 0.5, dampingFraction: 0.8), value: count)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

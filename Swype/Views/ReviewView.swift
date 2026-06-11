@@ -11,6 +11,7 @@ struct ReviewView: View {
     @State private var decisionHistory: [(id: String, decision: PhotoDecision)] = []
     @State private var cardID = UUID()
     @State private var showTrash = false
+    @State private var showBrowse = false
     @State private var groupTotalBytes: Int64 = 0
     @State private var cachedDeletedBytes: Int64 = 0
 
@@ -43,10 +44,15 @@ struct ReviewView: View {
         .sheet(isPresented: $showTrash) {
             TrashView().environment(vm).environment(lm)
         }
+        .sheet(isPresented: $showBrowse) {
+            MonthBrowseView(group: group).environment(vm).environment(lm)
+        }
         .onAppear {
             setupPending()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                showTutorial = true
+            if !hasSeenReviewTutorial {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    showTutorial = true
+                }
             }
         }
         .task {
@@ -56,6 +62,7 @@ struct ReviewView: View {
             if showTutorial {
                 ReviewTutorialOverlay(onDismiss: {
                     withAnimation(.easeInOut(duration: 0.3)) { showTutorial = false }
+                    hasSeenReviewTutorial = true
                 })
                 .environment(lm)
                 .transition(.opacity)
@@ -351,6 +358,46 @@ struct ReviewView: View {
                         .padding(.vertical, 18)
                         .background(Theme.redGradient, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                         .shadow(color: Theme.red.opacity(0.4), radius: 16, y: 8)
+                    }
+                }
+                HStack(spacing: 10) {
+                    Button { showBrowse = true } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "photo.stack")
+                                .font(.system(size: 14, weight: .semibold))
+                            Text(s.browsePhotos)
+                                .font(.system(size: 14, weight: .semibold))
+                        }
+                        .foregroundStyle(Theme.accent)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(Theme.accent.opacity(0.12))
+                                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .stroke(Theme.accent.opacity(0.25), lineWidth: 1))
+                        )
+                    }
+
+                    Button {
+                        vm.resetGroupDecisions(groupID: group.id)
+                        setupPending()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.counterclockwise")
+                                .font(.system(size: 14, weight: .semibold))
+                            Text(s.restartReview)
+                                .font(.system(size: 14, weight: .semibold))
+                        }
+                        .foregroundStyle(Theme.orange)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(Theme.orange.opacity(0.12))
+                                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .stroke(Theme.orange.opacity(0.25), lineWidth: 1))
+                        )
                     }
                 }
                 Button(s.close) { dismiss() }

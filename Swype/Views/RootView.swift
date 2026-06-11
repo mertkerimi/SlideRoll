@@ -19,8 +19,10 @@ struct RootView: View {
                 case .home:
                     MonthListView()
                         .onAppear {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                                showTour = true
+                            if !hasSeenAppTour {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                                    showTour = true
+                                }
                             }
                         }
                 case .stats:
@@ -64,6 +66,7 @@ struct RootView: View {
                         proxy: proxy,
                         onFinish: {
                             withAnimation(.easeInOut(duration: 0.3)) { showTour = false }
+                            hasSeenAppTour = true
                         }
                     )
                     .environment(lm)
