@@ -59,6 +59,37 @@ class PhotoLibraryViewModel {
         set { UserDefaults.standard.set(newValue, forKey: persistenceKey) }
     }
 
+    // MARK: - Daily Stats
+    private static let sharedDefaults = UserDefaults(suiteName: "group.com.mertkerimi.Swype") ?? .standard
+    private static let dailyCountKey = "dailyDecisionCount"
+    private static let dailyDateKey  = "dailyDecisionDate"
+
+    private var todayString: String {
+        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f.string(from: Date())
+    }
+
+    var todayDecisionCount: Int {
+        guard Self.sharedDefaults.string(forKey: Self.dailyDateKey) == todayString else { return 0 }
+        return Self.sharedDefaults.integer(forKey: Self.dailyCountKey)
+    }
+
+    private func incrementDailyCount() {
+        let today = todayString
+        if Self.sharedDefaults.string(forKey: Self.dailyDateKey) != today {
+            Self.sharedDefaults.set(today, forKey: Self.dailyDateKey)
+            Self.sharedDefaults.set(0, forKey: Self.dailyCountKey)
+        }
+        let newVal = Self.sharedDefaults.integer(forKey: Self.dailyCountKey) + 1
+        Self.sharedDefaults.set(newVal, forKey: Self.dailyCountKey)
+    }
+
+    // MARK: - iCloud Check
+    func isInCloud(for id: String) -> Bool {
+        guard let asset = allAssets[id] else { return false }
+        let resources = PHAssetResource.assetResources(for: asset)
+        return resources.contains { !($0.value(forKey: "locallyAvailable") as? Bool ?? true) }
+    }
+
     init() {
         authStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
     }
@@ -127,6 +158,24 @@ class PhotoLibraryViewModel {
             group.photoIDs.filter { (group.decisions[$0] ?? .undecided) == .delete }
         }
         isLoading = false
+
+        // Sync data for widget
+        let allIDs    = built.flatMap { $0.photoIDs }
+        let total     = allIDs.count
+        let undecided = built.reduce(0) { sum, group in
+            sum + group.photoIDs.filter { (group.decisions[$0] ?? .undecided) == .undecided }.count
+        }
+        let reviewed  = total - undecided
+        let deleteIDs = built.flatMap { group in
+            group.photoIDs.filter { (group.decisions[$0] ?? .undecided) == .delete }
+        }
+        let savingsBytes = deleteIDs.compactMap { allAssets[$0] }.reduce(Int64(0)) { sum, asset in
+            sum + PHAssetResource.assetResources(for: asset).reduce(0) { $0 + ($1.value(forKey: "fileSize") as? Int64 ?? 0) }
+        }
+        Self.sharedDefaults.set(undecided,    forKey: "widgetPendingCount")
+        Self.sharedDefaults.set(total,        forKey: "widgetTotalCount")
+        Self.sharedDefaults.set(reviewed,     forKey: "widgetReviewedCount")
+        Self.sharedDefaults.set(savingsBytes, forKey: "widgetSavingsBytes")
     }
 
     var yearGroups: [YearGroup] {
@@ -228,6 +277,7 @@ class PhotoLibraryViewModel {
         } else {
             toDeleteIDs.removeAll { $0 == photoID }
         }
+        incrementDailyCount()
     }
 
     func undoDecision(for photoID: String, in groupID: String) {

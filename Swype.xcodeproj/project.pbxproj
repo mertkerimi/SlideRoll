@@ -8,9 +8,40 @@
 
 /* Begin PBXBuildFile section */
 		E025B4B82FDAECA7007926F0 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = E025B4B72FDAECA7007926F0 /* GoogleMobileAds */; };
+		E074B5BD2FDB29BA00650DD6 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E074B5BC2FDB29BA00650DD6 /* WidgetKit.framework */; };
+		E074B5BF2FDB29BA00650DD6 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E074B5BE2FDB29BA00650DD6 /* SwiftUI.framework */; };
+		E074B5CA2FDB29BC00650DD6 /* SwypeWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E074B5BA2FDB29BA00650DD6 /* SwypeWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		E074B5C82FDB29BC00650DD6 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E0BE94112FD06C2F002A1CC6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E074B5B92FDB29BA00650DD6;
+			remoteInfo = SwypeWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		E074B5CF2FDB29BC00650DD6 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				E074B5CA2FDB29BC00650DD6 /* SwypeWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		E074B5BA2FDB29BA00650DD6 /* SwypeWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SwypeWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E074B5BC2FDB29BA00650DD6 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		E074B5BE2FDB29BA00650DD6 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		E074B5D12FDB2A6400650DD6 /* SwypeWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SwypeWidgetExtension.entitlements; sourceTree = "<group>"; };
 		E0BE94192FD06C2F002A1CC6 /* Swype.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Swype.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -22,9 +53,24 @@
 			);
 			target = E0BE94182FD06C2F002A1CC6 /* Swype */;
 		};
+		E074B5CE2FDB29BC00650DD6 /* Exceptions for "SwypeWidget" folder in "SwypeWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = E074B5B92FDB29BA00650DD6 /* SwypeWidgetExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		E074B5C02FDB29BA00650DD6 /* SwypeWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				E074B5CE2FDB29BC00650DD6 /* Exceptions for "SwypeWidget" folder in "SwypeWidgetExtension" target */,
+			);
+			path = SwypeWidget;
+			sourceTree = "<group>";
+		};
 		E0BE941B2FD06C2F002A1CC6 /* Swype */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -36,6 +82,15 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		E074B5B72FDB29BA00650DD6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E074B5BF2FDB29BA00650DD6 /* SwiftUI.framework in Frameworks */,
+				E074B5BD2FDB29BA00650DD6 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		E0BE94162FD06C2F002A1CC6 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -47,10 +102,22 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		E074B5BB2FDB29BA00650DD6 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				E074B5BC2FDB29BA00650DD6 /* WidgetKit.framework */,
+				E074B5BE2FDB29BA00650DD6 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		E0BE94102FD06C2F002A1CC6 = {
 			isa = PBXGroup;
 			children = (
+				E074B5D12FDB2A6400650DD6 /* SwypeWidgetExtension.entitlements */,
 				E0BE941B2FD06C2F002A1CC6 /* Swype */,
+				E074B5C02FDB29BA00650DD6 /* SwypeWidget */,
+				E074B5BB2FDB29BA00650DD6 /* Frameworks */,
 				E0BE941A2FD06C2F002A1CC6 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -59,6 +126,7 @@
 			isa = PBXGroup;
 			children = (
 				E0BE94192FD06C2F002A1CC6 /* Swype.app */,
+				E074B5BA2FDB29BA00650DD6 /* SwypeWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -66,6 +134,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		E074B5B92FDB29BA00650DD6 /* SwypeWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E074B5CB2FDB29BC00650DD6 /* Build configuration list for PBXNativeTarget "SwypeWidgetExtension" */;
+			buildPhases = (
+				E074B5B62FDB29BA00650DD6 /* Sources */,
+				E074B5B72FDB29BA00650DD6 /* Frameworks */,
+				E074B5B82FDB29BA00650DD6 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				E074B5C02FDB29BA00650DD6 /* SwypeWidget */,
+			);
+			name = SwypeWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = SwypeWidgetExtension;
+			productReference = E074B5BA2FDB29BA00650DD6 /* SwypeWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		E0BE94182FD06C2F002A1CC6 /* Swype */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = E0BE94242FD06C30002A1CC6 /* Build configuration list for PBXNativeTarget "Swype" */;
@@ -73,10 +163,12 @@
 				E0BE94152FD06C2F002A1CC6 /* Sources */,
 				E0BE94162FD06C2F002A1CC6 /* Frameworks */,
 				E0BE94172FD06C2F002A1CC6 /* Resources */,
+				E074B5CF2FDB29BC00650DD6 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				E074B5C92FDB29BC00650DD6 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				E0BE941B2FD06C2F002A1CC6 /* Swype */,
@@ -99,6 +191,9 @@
 				LastSwiftUpdateCheck = 2650;
 				LastUpgradeCheck = 2650;
 				TargetAttributes = {
+					E074B5B92FDB29BA00650DD6 = {
+						CreatedOnToolsVersion = 26.5;
+					};
 					E0BE94182FD06C2F002A1CC6 = {
 						CreatedOnToolsVersion = 26.5;
 					};
@@ -122,11 +217,19 @@
 			projectRoot = "";
 			targets = (
 				E0BE94182FD06C2F002A1CC6 /* Swype */,
+				E074B5B92FDB29BA00650DD6 /* SwypeWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		E074B5B82FDB29BA00650DD6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		E0BE94172FD06C2F002A1CC6 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -137,6 +240,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		E074B5B62FDB29BA00650DD6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		E0BE94152FD06C2F002A1CC6 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -146,7 +256,77 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		E074B5C92FDB29BC00650DD6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E074B5B92FDB29BA00650DD6 /* SwypeWidgetExtension */;
+			targetProxy = E074B5C82FDB29BC00650DD6 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		E074B5CC2FDB29BC00650DD6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = SwypeWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = TU72NFPK84;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SwypeWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SwypeWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mertkerimi.Swype.SwypeWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E074B5CD2FDB29BC00650DD6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = SwypeWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = TU72NFPK84;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SwypeWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SwypeWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mertkerimi.Swype.SwypeWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		E0BE94222FD06C30002A1CC6 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -273,6 +453,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Swype/Swype.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = TU72NFPK84;
@@ -305,6 +486,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Swype/Swype.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = TU72NFPK84;
@@ -335,6 +517,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		E074B5CB2FDB29BC00650DD6 /* Build configuration list for PBXNativeTarget "SwypeWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E074B5CC2FDB29BC00650DD6 /* Debug */,
+				E074B5CD2FDB29BC00650DD6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		E0BE94142FD06C2F002A1CC6 /* Build configuration list for PBXProject "Swype" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

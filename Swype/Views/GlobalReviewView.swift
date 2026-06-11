@@ -289,7 +289,9 @@ struct GlobalReviewView: View {
         withAnimation(.easeInOut(duration: 0.1)) { currentIndex = nextIndex }
         cardID = UUID()
         swipeCount += 1
-        let shouldShowAd = swipeCount % 10 == 0 || nextIndex >= pendingIDs.count
+        // AD FREQUENCY — her kaç kaydırmada bir reklam gösterilsin (şu an: 100)
+        let adFrequency = 100
+        let shouldShowAd = swipeCount % adFrequency == 0 || nextIndex >= pendingIDs.count
         if shouldShowAd {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 adManager.showIfReady()

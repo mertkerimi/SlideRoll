@@ -18,6 +18,7 @@ struct PhotoCardView: View {
     @State private var image: UIImage?
     @State private var isDragging = false
     @State private var isVideo = false
+    @State private var isInCloud = false
     @State private var player: AVPlayer?
     @State private var isVideoLoading = false
     @State private var isPlaying = false
@@ -96,11 +97,20 @@ struct PhotoCardView: View {
         .task {
             isVideo = vm.isVideo(for: photoID)
             isLivePhoto = vm.isLivePhoto(for: photoID)
+            isInCloud = vm.isInCloud(for: photoID)
             image = await vm.loadImage(for: photoID, targetSize: CGSize(width: 700, height: 900))
             if isLivePhoto {
                 let lp = await vm.loadLivePhoto(for: photoID, targetSize: CGSize(width: 700, height: 900))
                 livePhoto = lp
                 isLivePhotoPlaying = true
+            }
+        }
+        .onChange(of: dragDirection) { _, newDir in
+            switch newDir {
+            case .keep:   UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            case .delete: UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+            case .skip:   UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            case .none:   break
             }
         }
         .onDisappear {
@@ -212,6 +222,28 @@ struct PhotoCardView: View {
 
             if isVideo { videoOverlay }
             if isLivePhoto { livePhotoOverlay }
+            if isInCloud { iCloudBadge }
+        }
+    }
+
+    private var iCloudBadge: some View {
+        VStack {
+            HStack {
+                Spacer()
+                HStack(spacing: 4) {
+                    Image(systemName: "icloud")
+                        .font(.system(size: 11, weight: .semibold))
+                    Text("iCloud")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(.black.opacity(0.55), in: Capsule())
+                .padding(.top, 14)
+                .padding(.trailing, 14)
+            }
+            Spacer()
         }
     }
 

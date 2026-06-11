@@ -305,6 +305,11 @@ struct Strings {
         ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"]
     )}
 
+    // MARK: - Daily Stats
+    func todayCount(_ n: Int) -> String {
+        pick("Bugün \(n) fotoğraf incelendi 🔥", "\(n) photos reviewed today 🔥", "Heute \(n) Fotos bewertet 🔥")
+    }
+
     // MARK: - Helper
     private func pick(_ tr: [String], _ en: [String], _ de: [String]) -> [String] {
         switch language {
