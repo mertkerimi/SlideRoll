@@ -7,6 +7,7 @@ enum AppTab {
 struct RootView: View {
     @Environment(PhotoLibraryViewModel.self) var vm
     @Environment(LanguageManager.self) var lm
+    @Environment(NotificationManager.self) var notif
 
     @State private var selectedTab: AppTab = .home
     @AppStorage("hasSeenAppTour") private var hasSeenAppTour = false
@@ -39,7 +40,7 @@ struct RootView: View {
                     }
                 case .settings:
                     NavigationStack {
-                        SettingsView()
+                        SettingsView().environment(notif)
                             .navigationBarTitleDisplayMode(.inline)
                             .toolbar {
                                 ToolbarItem(placement: .principal) {

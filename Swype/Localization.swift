@@ -286,7 +286,34 @@ struct Strings {
         return fmt.string(from: date).capitalized
     }
 
+    // MARK: - Notifications
+    var notificationsSection: String { pick("Bildirimler", "Notifications", "Benachrichtigungen") }
+    var weeklyReminder: String       { pick("Haftalık Hatırlatıcı", "Weekly Reminder", "Wöchentliche Erinnerung") }
+    var weeklyReminderSub: String    { pick("Her hafta belirtilen günde hatırlatır", "Reminds you every week on the chosen day", "Jede Woche am gewählten Tag erinnern") }
+    var storageWarning: String       { pick("Depolama Uyarısı", "Storage Warning", "Speicherwarnung") }
+    var storageWarningSub: String    { pick("Depolama %80'i geçince bildirim gönderir", "Sends a notification when storage exceeds 80%", "Benachrichtigung bei mehr als 80 % Speicher") }
+    var reminderDay: String          { pick("Gün", "Day", "Tag") }
+    var reminderTime: String         { pick("Saat", "Time", "Uhrzeit") }
+    var allowNotifications: String   { pick("Bildirimlere İzin Ver", "Allow Notifications", "Benachrichtigungen erlauben") }
+    var notifPermissionSub: String   { pick("Hatırlatıcı almak için izin gerekli", "Permission required to receive reminders", "Berechtigung für Erinnerungen erforderlich") }
+    var notifDenied: String          { pick("Bildirimler kapalı", "Notifications disabled", "Benachrichtigungen deaktiviert") }
+    var notifDeniedSub: String       { pick("Sistem ayarlarından bildirimlere izin ver", "Allow notifications in System Settings", "Benachrichtigungen in Einstellungen erlauben") }
+    var openSettings: String         { pick("Ayarları Aç", "Open Settings", "Einstellungen öffnen") }
+    var weekdays: [String]           { pick(
+        ["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"],
+        ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
+        ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"]
+    )}
+
     // MARK: - Helper
+    private func pick(_ tr: [String], _ en: [String], _ de: [String]) -> [String] {
+        switch language {
+        case .turkish: return tr
+        case .english: return en
+        case .german:  return de
+        }
+    }
+
     private func pick(_ tr: String, _ en: String, _ de: String) -> String {
         switch language {
         case .turkish: return tr

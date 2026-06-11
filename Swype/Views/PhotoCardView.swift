@@ -21,6 +21,10 @@ struct PhotoCardView: View {
     @State private var player: AVPlayer?
     @State private var isVideoLoading = false
     @State private var isPlaying = false
+    @State private var currentTime: Double = 0
+    @State private var videoDurationSecs: Double = 0
+    @State private var isSeeking = false
+    @State private var timeObserver: Any?
 
     @State private var isLivePhoto = false
     @State private var livePhoto: PHLivePhoto?
@@ -100,9 +104,12 @@ struct PhotoCardView: View {
             }
         }
         .onDisappear {
+            if let obs = timeObserver { player?.removeTimeObserver(obs); timeObserver = nil }
             player?.pause()
             player = nil
             isPlaying = false
+            currentTime = 0
+            videoDurationSecs = 0
             isLivePhotoPlaying = false
             livePhoto = nil
         }
@@ -140,9 +147,18 @@ struct PhotoCardView: View {
                 self.player = p
                 self.isPlaying = true
                 self.isVideoLoading = false
+                self.videoDurationSecs = avAsset.duration.seconds
                 // Loop
                 NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime,
-                    object: p.currentItem, queue: .main) { _ in p.seek(to: .zero); p.play() }
+                    object: p.currentItem, queue: .main) { _ in
+                    p.seek(to: .zero); p.play()
+                }
+                // Time observer — update seek bar every 0.1s
+                let interval = CMTime(seconds: 0.1, preferredTimescale: 600)
+                self.timeObserver = p.addPeriodicTimeObserver(forInterval: interval, queue: .main) { time in
+                    guard !self.isSeeking else { return }
+                    self.currentTime = time.seconds
+                }
             }
         }
     }
@@ -214,26 +230,62 @@ struct PhotoCardView: View {
 
             VStack {
                 Spacer()
-                HStack {
-                    if let duration = vm.videoDuration(for: photoID) {
-                        Text(formatDuration(duration))
+                VStack(spacing: 4) {
+                    // Seek bar
+                    if videoDurationSecs > 0 {
+                        GeometryReader { bar in
+                            let progress = videoDurationSecs > 0 ? CGFloat(currentTime / videoDurationSecs) : 0
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(.white.opacity(0.3)).frame(height: 3)
+                                Capsule().fill(.white).frame(width: bar.size.width * progress, height: 3)
+                                Circle().fill(.white).frame(width: 12, height: 12)
+                                    .offset(x: bar.size.width * progress - 6)
+                            }
+                            .contentShape(Rectangle())
+                            .gesture(DragGesture(minimumDistance: 0)
+                                .onChanged { val in
+                                    isSeeking = true
+                                    let ratio = max(0, min(1, val.location.x / bar.size.width))
+                                    currentTime = ratio * videoDurationSecs
+                                    player?.seek(to: CMTime(seconds: currentTime, preferredTimescale: 600),
+                                                 toleranceBefore: .zero, toleranceAfter: .zero)
+                                }
+                                .onEnded { _ in
+                                    isSeeking = false
+                                    if isPlaying { player?.play() }
+                                }
+                            )
+                        }
+                        .frame(height: 12)
+                        .padding(.horizontal, 12)
+                    }
+
+                    HStack {
+                        Text(formatDuration(currentTime))
                             .font(.system(size: 12, weight: .semibold, design: .rounded))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
                             .background(.black.opacity(0.6), in: Capsule())
                             .padding(.leading, 12)
-                            .padding(.bottom, 12)
+                        Spacer()
+                        if videoDurationSecs > 0 {
+                            Text(formatDuration(videoDurationSecs))
+                                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.7))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(.black.opacity(0.6), in: Capsule())
+                        }
+                        Image(systemName: isPlaying ? "pause.fill" : "video.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(.black.opacity(0.6), in: Capsule())
+                            .padding(.trailing, 12)
                     }
-                    Spacer()
-                    Image(systemName: isPlaying ? "pause.fill" : "video.fill")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(.black.opacity(0.6), in: Capsule())
-                        .padding(.trailing, 12)
-                        .padding(.bottom, 12)
+                    .padding(.bottom, 12)
                 }
             }
         }
@@ -406,6 +458,8 @@ struct PhotoCardView: View {
         }
     }
 
+    private var videoSeekBarHeight: CGFloat { isVideo && videoDurationSecs > 0 ? 50 : 0 }
+
     private var shareButton: some View {
         VStack {
             Spacer()
@@ -421,7 +475,7 @@ struct PhotoCardView: View {
                         .background(.black.opacity(0.45), in: Circle())
                 }
                 .padding(.trailing, 12)
-                .padding(.bottom, 58)
+                .padding(.bottom, 58 + videoSeekBarHeight)
             }
         }
     }
@@ -455,7 +509,7 @@ struct PhotoCardView: View {
                         .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isFav)
                 }
                 .padding(.trailing, 12)
-                .padding(.bottom, 12)
+                .padding(.bottom, 12 + videoSeekBarHeight)
             }
         }
     }
