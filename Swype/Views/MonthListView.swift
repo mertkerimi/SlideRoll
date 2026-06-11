@@ -5,6 +5,7 @@ import SwiftUI
 struct MonthListView: View {
     @Environment(PhotoLibraryViewModel.self) var vm
     @Environment(LanguageManager.self) var lm
+    @Environment(AdManager.self) var adManager
     @State private var showTrash = false
     @State private var showShuffle = false
     @State private var navPath: [YearGroup] = []
@@ -36,13 +37,13 @@ struct MonthListView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: YearGroup.self) { year in
-                MonthsForYearView(year: year).environment(vm).environment(lm)
+                MonthsForYearView(year: year).environment(vm).environment(lm).environment(adManager)
             }
             .sheet(isPresented: $showTrash) {
                 TrashView().environment(vm).environment(lm)
             }
             .fullScreenCover(isPresented: $showShuffle) {
-                GlobalReviewView().environment(vm).environment(lm)
+                GlobalReviewView().environment(vm).environment(lm).environment(adManager)
             }
             .onReceive(NotificationCenter.default.publisher(for: .tourNavigateToFirstYear)) { _ in
                 if let firstYear = vm.yearGroups.first {
@@ -405,6 +406,7 @@ struct MonthsForYearView: View {
     let year: YearGroup
     @Environment(PhotoLibraryViewModel.self) var vm
     @Environment(LanguageManager.self) var lm
+    @Environment(AdManager.self) var adManager
     @State private var selectedGroup: MonthGroup?
     @State private var showTrash = false
 
@@ -441,7 +443,7 @@ struct MonthsForYearView: View {
         .navigationTitle(year.title)
         .navigationBarTitleDisplayMode(.large)
         .sheet(item: $selectedGroup) { group in
-            ReviewView(group: group).environment(vm).environment(lm)
+            ReviewView(group: group).environment(vm).environment(lm).environment(adManager)
         }
         .sheet(isPresented: $showTrash) {
             TrashView().environment(vm).environment(lm)
