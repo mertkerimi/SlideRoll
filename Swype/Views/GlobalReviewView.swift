@@ -75,7 +75,7 @@ struct GlobalReviewView: View {
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(Theme.textPrimary)
                 }
-                Text("\(currentIndex + 1) / \(pendingIDs.count)")
+                Text("\((currentIndex + 1).fmtCount) / \(pendingIDs.count.fmtCount)")
                     .font(.system(size: 12, weight: .medium, design: .rounded))
                     .foregroundStyle(Theme.textSecondary)
             }
@@ -114,7 +114,7 @@ struct GlobalReviewView: View {
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(Theme.textTertiary)
                 Spacer()
-                Text("\(currentIndex) / \(pendingIDs.count)")
+                Text("\(currentIndex.fmtCount) / \(pendingIDs.count.fmtCount)")
                     .font(.system(size: 11, weight: .medium, design: .rounded))
                     .foregroundStyle(Theme.textTertiary)
             }

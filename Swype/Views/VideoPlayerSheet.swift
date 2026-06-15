@@ -5,6 +5,7 @@ import Photos
 struct VideoPlayerSheet: View {
     let photoID: String
     @Environment(PhotoLibraryViewModel.self) var vm
+    @Environment(LanguageManager.self) var lm
     @Environment(\.dismiss) var dismiss
 
     @State private var player: AVPlayer? = nil
@@ -24,7 +25,7 @@ struct VideoPlayerSheet: View {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 36))
                         .foregroundStyle(.white.opacity(0.5))
-                    Text("Video yüklenemedi")
+                    Text(lm.s.videoLoadError)
                         .font(.system(size: 15, weight: .medium))
                         .foregroundStyle(.white.opacity(0.6))
                 }

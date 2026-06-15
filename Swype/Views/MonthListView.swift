@@ -50,6 +50,14 @@ struct MonthListView: View {
                     navPath = [firstYear]
                 }
             }
+            .onReceive(NotificationCenter.default.publisher(for: .widgetOpenYear)) { note in
+                guard let yearID = note.object as? String,
+                      let match = vm.yearGroups.first(where: { $0.id == yearID }) else { return }
+                navPath = [match]
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .widgetOpenShuffle)) { _ in
+                showShuffle = true
+            }
         }
     }
 
@@ -134,10 +142,10 @@ struct MonthListView: View {
                 .tracking(0.8)
 
             HStack(alignment: .bottom, spacing: 6) {
-                Text("\(totalReviewed)")
+                Text(totalReviewed.fmtCount)
                     .font(.system(size: 40, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.textPrimary)
-                Text("/ \(totalPhotos)")
+                Text("/ \(totalPhotos.fmtCount)")
                     .font(.system(size: 18, weight: .medium))
                     .foregroundStyle(Theme.textSecondary)
                     .padding(.bottom, 6)
@@ -622,7 +630,7 @@ struct MonthCard: View {
                 Image(systemName: icon)
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(color)
-                Text("\(value)")
+                Text(value.fmtCount)
                     .font(.system(size: 14, weight: .bold, design: .rounded))
                     .foregroundStyle(value > 0 ? color : Theme.textTertiary)
                     .contentTransition(.numericText())

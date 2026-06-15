@@ -2,6 +2,7 @@ import Foundation
 import Photos
 import SwiftUI
 import Observation
+import WidgetKit
 
 @Observable
 @MainActor
@@ -81,6 +82,7 @@ class PhotoLibraryViewModel {
         }
         let newVal = Self.sharedDefaults.integer(forKey: Self.dailyCountKey) + 1
         Self.sharedDefaults.set(newVal, forKey: Self.dailyCountKey)
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     // MARK: - iCloud Check
@@ -169,13 +171,33 @@ class PhotoLibraryViewModel {
         let deleteIDs = built.flatMap { group in
             group.photoIDs.filter { (group.decisions[$0] ?? .undecided) == .delete }
         }
+        let keptIDs = built.flatMap { group in
+            group.photoIDs.filter { (group.decisions[$0] ?? .undecided) == .keep }
+        }
         let savingsBytes = deleteIDs.compactMap { allAssets[$0] }.reduce(Int64(0)) { sum, asset in
             sum + PHAssetResource.assetResources(for: asset).reduce(0) { $0 + ($1.value(forKey: "fileSize") as? Int64 ?? 0) }
         }
-        Self.sharedDefaults.set(undecided,    forKey: "widgetPendingCount")
-        Self.sharedDefaults.set(total,        forKey: "widgetTotalCount")
-        Self.sharedDefaults.set(reviewed,     forKey: "widgetReviewedCount")
-        Self.sharedDefaults.set(savingsBytes, forKey: "widgetSavingsBytes")
+        Self.sharedDefaults.set(undecided,           forKey: "widgetPendingCount")
+        Self.sharedDefaults.set(total,               forKey: "widgetTotalCount")
+        Self.sharedDefaults.set(reviewed,            forKey: "widgetReviewedCount")
+        Self.sharedDefaults.set(savingsBytes,        forKey: "widgetSavingsBytes")
+        Self.sharedDefaults.set(totalDeletedCount,   forKey: "widgetDeletedCount")
+        Self.sharedDefaults.set(keptIDs.count,       forKey: "widgetKeptCount")
+
+        // Year breakdown for large widget
+        let yearData = Dictionary(grouping: built) { String($0.id.prefix(4)) }
+            .map { year, months -> [String: Any] in
+                let t = months.reduce(0) { $0 + $1.photoIDs.count }
+                let r = months.reduce(0) { sum, g in
+                    sum + g.photoIDs.filter { (g.decisions[$0] ?? .undecided) != .undecided }.count
+                }
+                return ["year": year, "total": t, "reviewed": r]
+            }
+            .sorted { ($0["year"] as? String ?? "") > ($1["year"] as? String ?? "") }
+        if let encoded = try? JSONSerialization.data(withJSONObject: yearData) {
+            Self.sharedDefaults.set(encoded, forKey: "widgetYearData")
+        }
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     var yearGroups: [YearGroup] {
@@ -372,6 +394,8 @@ class PhotoLibraryViewModel {
         for id in ids { saved.removeValue(forKey: id) }
         savedDecisions = saved
         totalDeletedCount += ids.count
+        Self.sharedDefaults.set(totalDeletedCount, forKey: "widgetDeletedCount")
+        WidgetCenter.shared.reloadAllTimelines()
         toDeleteIDs = []
         for idx in monthGroups.indices {
             for id in ids {

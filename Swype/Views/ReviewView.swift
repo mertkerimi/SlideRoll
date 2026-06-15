@@ -101,7 +101,7 @@ struct ReviewView: View {
                 Text(lm.s.monthTitle(from: group.id))
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(Theme.textPrimary)
-                Text("\(currentIndex + 1) / \(pendingIDs.count)")
+                Text("\((currentIndex + 1).fmtCount) / \(pendingIDs.count.fmtCount)")
                     .font(.system(size: 12, weight: .medium, design: .rounded))
                     .foregroundStyle(Theme.textSecondary)
             }
@@ -142,7 +142,7 @@ struct ReviewView: View {
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(Theme.textTertiary)
                 Spacer()
-                Text("\(currentGroup?.reviewed ?? 0) / \(currentGroup?.total ?? 0)")
+                Text("\((currentGroup?.reviewed ?? 0).fmtCount) / \((currentGroup?.total ?? 0).fmtCount)")
                     .font(.system(size: 11, weight: .medium, design: .rounded))
                     .foregroundStyle(Theme.textTertiary)
             }
