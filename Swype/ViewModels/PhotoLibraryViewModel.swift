@@ -65,13 +65,18 @@ class PhotoLibraryViewModel {
     private static let dailyCountKey = "dailyDecisionCount"
     private static let dailyDateKey  = "dailyDecisionDate"
 
+    // Stored property so @Observable fires whenever the streak changes,
+    // even from calls originating in GlobalReviewView (behind a fullScreenCover).
+    var todayDecisionCount: Int = 0
+
     private var todayString: String {
         let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f.string(from: Date())
     }
 
-    var todayDecisionCount: Int {
-        guard Self.sharedDefaults.string(forKey: Self.dailyDateKey) == todayString else { return 0 }
-        return Self.sharedDefaults.integer(forKey: Self.dailyCountKey)
+    private func loadTodayCount() {
+        let stored = Self.sharedDefaults.integer(forKey: Self.dailyCountKey)
+        let storedDate = Self.sharedDefaults.string(forKey: Self.dailyDateKey)
+        todayDecisionCount = (storedDate == todayString) ? stored : 0
     }
 
     private func incrementDailyCount() {
@@ -82,6 +87,7 @@ class PhotoLibraryViewModel {
         }
         let newVal = Self.sharedDefaults.integer(forKey: Self.dailyCountKey) + 1
         Self.sharedDefaults.set(newVal, forKey: Self.dailyCountKey)
+        todayDecisionCount = newVal
         WidgetCenter.shared.reloadAllTimelines()
     }
 
@@ -198,6 +204,7 @@ class PhotoLibraryViewModel {
             Self.sharedDefaults.set(encoded, forKey: "widgetYearData")
         }
         WidgetCenter.shared.reloadAllTimelines()
+        loadTodayCount()
         rebuildYearGroups()
     }
 
@@ -279,14 +286,23 @@ class PhotoLibraryViewModel {
             options.isNetworkAccessAllowed = true
             options.deliveryMode = .highQualityFormat
             var resumed = false
-            imageManager.requestLivePhoto(for: asset, targetSize: targetSize,
-                                          contentMode: .aspectFill, options: options) { livePhoto, info in
+
+            let requestID = imageManager.requestLivePhoto(
+                for: asset, targetSize: targetSize, contentMode: .aspectFill, options: options
+            ) { livePhoto, info in
                 guard !resumed else { return }
                 let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
-                if !isDegraded {
-                    resumed = true
-                    continuation.resume(returning: livePhoto)
-                }
+                if isDegraded { return }
+                resumed = true
+                continuation.resume(returning: livePhoto)
+            }
+
+            // 15s timeout — if iCloud live photo download stalls, fall back to nil (shows as still)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 15) { [weak self] in
+                guard !resumed else { return }
+                resumed = true
+                self?.imageManager.cancelImageRequest(requestID)
+                continuation.resume(returning: nil)
             }
         }
     }
@@ -443,7 +459,8 @@ class PhotoLibraryViewModel {
         }
     }
 
-    // Returns the full-quality image, skipping any degraded intermediate delivery
+    // Returns the full-quality image, skipping degraded intermediate delivery.
+    // Falls back to the degraded version after 10s so slow iCloud downloads never hang.
     func loadImage(for id: String, targetSize: CGSize) async -> UIImage? {
         guard let asset = allAssets[id] else { return nil }
         return await withCheckedContinuation { continuation in
@@ -453,12 +470,26 @@ class PhotoLibraryViewModel {
             options.resizeMode = .fast
             options.isSynchronous = false
             var resumed = false
-            imageManager.requestImage(for: asset, targetSize: targetSize, contentMode: .aspectFill, options: options) { image, info in
-                guard !resumed else { return }
+            var degradedFallback: UIImage? = nil
+
+            let requestID = imageManager.requestImage(
+                for: asset, targetSize: targetSize, contentMode: .aspectFill, options: options
+            ) { image, info in
                 let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
-                if isDegraded { return }
+                if isDegraded {
+                    if !resumed { degradedFallback = image }
+                    return
+                }
+                guard !resumed else { return }
                 resumed = true
                 continuation.resume(returning: image)
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
+                guard !resumed else { return }
+                resumed = true
+                self?.imageManager.cancelImageRequest(requestID)
+                continuation.resume(returning: degradedFallback)
             }
         }
     }
