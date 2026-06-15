@@ -293,6 +293,8 @@ struct LargestPhotoDetailView: View {
         PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
             DispatchQueue.main.async {
                 guard let avAsset else { self.videoFailed = true; self.isVideoLoading = false; return }
+                try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+                try? AVAudioSession.sharedInstance().setActive(true)
                 let item = AVPlayerItem(asset: avAsset)
                 let p = AVPlayer(playerItem: item)
                 self.player = p

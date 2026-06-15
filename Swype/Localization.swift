@@ -62,6 +62,8 @@ struct Strings {
     var savingsLabel: String   { pick("Kazanılan Alan", "Space Freed", "Freigegebener Speicher") }
     var actionStart: String    { pick("Başla",     "Start",     "Starten") }
     var actionContinue: String { pick("Devam Et",  "Continue",  "Weiter") }
+    var continueFromTitle: String { pick("Kaldığın Yerden Devam Et", "Continue Where You Left Off", "Weitermachen") }
+    func pendingPhotos(_ n: Int) -> String { pick("\(n.fmtCount) fotoğraf bekliyor", "\(n.fmtCount) photos pending", "\(n.fmtCount) Fotos ausstehend") }
     var shuffleTitle: String   { pick("Karışık İnceleme", "Shuffle Review", "Zufällige Überprüfung") }
     var shuffleCompleted: String { pick("Hepsi tamamlandı!", "All done!", "Alles erledigt!") }
     var shuffleHint: String    { pick("Tüm fotoğrafları karışık incele", "Review all photos in shuffle mode", "Alle Fotos zufällig überprüfen") }
