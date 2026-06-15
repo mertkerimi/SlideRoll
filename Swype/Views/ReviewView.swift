@@ -13,6 +13,7 @@ struct ReviewView: View {
     @State private var cardID = UUID()
     @State private var showTrash = false
     @State private var showBrowse = false
+    @State private var cardFlyout: SwipeDirection? = nil
     @State private var swipeCount = 0
     @State private var groupTotalBytes: Int64 = 0
     @State private var cachedDeletedBytes: Int64 = 0
@@ -196,15 +197,21 @@ struct ReviewView: View {
                     .shadow(color: .black.opacity(0.3), radius: 10, y: 4)
             }
             if currentIndex + 1 < pendingIDs.count {
-                RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .fill(Theme.surface)
-                    .scaleEffect(0.93).offset(y: 11)
-                    .shadow(color: .black.opacity(0.3), radius: 12, y: 5)
+                NextCardPreview(photoID: pendingIDs[currentIndex + 1])
+                    .id(pendingIDs[currentIndex + 1])
+                    .environment(vm)
+                    .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+                    .scaleEffect(0.93)
+                    .offset(y: 11)
+                    .blur(radius: 7)
+                    .shadow(color: .black.opacity(0.28), radius: 12, y: 5)
+                    .allowsHitTesting(false)
             }
             PhotoCardView(
                 photoID: pendingIDs[currentIndex],
-                onSwipe: { handleSwipe($0) },
-                onTapUndo: { undoLast() }
+                onSwipe: { dir in cardFlyout = nil; handleSwipe(dir) },
+                onTapUndo: { undoLast() },
+                externalFlyout: $cardFlyout
             )
             .id(cardID)
             .environment(vm)
@@ -235,29 +242,37 @@ struct ReviewView: View {
                 // Skip — leftmost
                 actionButton(icon: "clock", color: Theme.orange,
                              bg: Theme.orange.opacity(0.15), border: false) {
-                    handleSwipe(.skip)
+                    cardFlyout = .skip
                 }
 
                 // Delete — equal center
-                Button { handleSwipe(.delete) } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 60)
-                        .background(Theme.redGradient, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                        .shadow(color: Theme.red.opacity(0.35), radius: 14, y: 6)
+                Button { cardFlyout = .delete } label: {
+                    VStack(spacing: 3) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 18, weight: .bold))
+                        Text(s.deleteBadge)
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 60)
+                    .background(Theme.redGradient, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .shadow(color: Theme.red.opacity(0.35), radius: 14, y: 6)
                 }
 
                 // Keep — equal center
-                Button { handleSwipe(.keep) } label: {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 60)
-                        .background(Theme.greenGradient, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                        .shadow(color: Theme.green.opacity(0.4), radius: 14, y: 6)
+                Button { cardFlyout = .keep } label: {
+                    VStack(spacing: 3) {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 18, weight: .bold))
+                        Text(s.keepBadge)
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 60)
+                    .background(Theme.greenGradient, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .shadow(color: Theme.green.opacity(0.4), radius: 14, y: 6)
                 }
 
                 // Trash — rightmost
@@ -464,6 +479,28 @@ struct ReviewView: View {
         Task.detached(priority: .utility) {
             let bytes = await vm.toDeleteBytes(in: groupID)
             await MainActor.run { cachedDeletedBytes = bytes }
+        }
+    }
+}
+
+// MARK: - Next Card Preview (blurred background)
+
+private struct NextCardPreview: View {
+    let photoID: String
+    @Environment(PhotoLibraryViewModel.self) var vm
+    @State private var image: UIImage?
+
+    var body: some View {
+        ZStack {
+            Color.black
+            if let img = image {
+                Image(uiImage: img)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+            }
+        }
+        .task {
+            image = await vm.loadImage(for: photoID, targetSize: CGSize(width: 400, height: 520))
         }
     }
 }
