@@ -11,6 +11,7 @@ struct PhotoCardView: View {
     let photoID: String
     let onSwipe: (SwipeDirection) -> Void
     let onTapUndo: () -> Void
+    @Binding var externalFlyout: SwipeDirection?
 
     @Environment(PhotoLibraryViewModel.self) var vm
     @Environment(LanguageManager.self) var lm
@@ -63,11 +64,15 @@ struct PhotoCardView: View {
         GeometryReader { geo in
             ZStack {
                 photoLayer(size: geo.size)
+                swipeColorOverlay
                 keepBadge.opacity(keepOpacity)
                 deleteBadge.opacity(deleteOpacity)
                 skipBadge.opacity(skipOpacity)
                 shareButton
                 favoriteButton
+                if isVideo || isLivePhoto {
+                    mediaUndoButton
+                }
             }
             .frame(width: geo.size.width, height: geo.size.height)
             .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
@@ -104,6 +109,10 @@ struct PhotoCardView: View {
                 livePhoto = lp
                 isLivePhotoPlaying = true
             }
+        }
+        .onChange(of: externalFlyout) { _, dir in
+            guard let dir, dir != .none else { return }
+            flyOut(dir, fromButton: true)
         }
         .onChange(of: dragDirection) { _, newDir in
             switch newDir {
@@ -332,16 +341,16 @@ struct PhotoCardView: View {
 
     private var livePhotoOverlay: some View {
         ZStack {
-            // Native-style Live Photo badge — top left, always visible
+            // Live Photo badge — top right, below iCloud badge when present
             VStack {
                 HStack {
+                    Spacer()
                     Image(systemName: isLivePhotoLoading ? "ellipsis" : "livephoto")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(.white)
                         .shadow(color: .black.opacity(0.6), radius: 4, x: 0, y: 1)
-                        .padding(.leading, 14)
-                        .padding(.top, 14)
-                    Spacer()
+                        .padding(.trailing, 14)
+                        .padding(.top, isInCloud ? 48 : 14)
                 }
                 Spacer()
             }
@@ -416,18 +425,28 @@ struct PhotoCardView: View {
             }
     }
 
-    private func flyOut(_ direction: SwipeDirection) {
+    private func flyOut(_ direction: SwipeDirection, fromButton: Bool = false) {
         let target: CGSize
-        switch direction {
-        case .keep:   target = CGSize(width: 700, height: offset.height * 2)
-        case .delete: target = CGSize(width: -700, height: offset.height * 2)
-        case .skip:   target = CGSize(width: offset.width, height: -900)
-        case .none:   return
+        if fromButton {
+            switch direction {
+            case .keep:   target = CGSize(width: 220, height: 0)
+            case .delete: target = CGSize(width: -220, height: 0)
+            case .skip:   target = CGSize(width: 0, height: -260)
+            case .none:   return
+            }
+        } else {
+            switch direction {
+            case .keep:   target = CGSize(width: 700, height: offset.height * 2)
+            case .delete: target = CGSize(width: -700, height: offset.height * 2)
+            case .skip:   target = CGSize(width: offset.width, height: -900)
+            case .none:   return
+            }
         }
-        withAnimation(.interactiveSpring(response: 0.35, dampingFraction: 0.7)) {
-            offset = target
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+        let animation: Animation = fromButton
+            ? .spring(response: 0.58, dampingFraction: 0.92)
+            : .interactiveSpring(response: 0.35, dampingFraction: 0.7)
+        withAnimation(animation) { offset = target }
+        DispatchQueue.main.asyncAfter(deadline: .now() + (fromButton ? 0.40 : 0.35)) {
             onSwipe(direction)
         }
     }
@@ -436,6 +455,27 @@ struct PhotoCardView: View {
         withAnimation(.interactiveSpring(response: 0.35, dampingFraction: 0.7)) {
             offset = .zero
         }
+    }
+
+    // MARK: - Swipe Color Overlays
+
+    private var swipeColorOverlay: some View {
+        ZStack {
+            LinearGradient(
+                colors: [.clear, Color.green.opacity(0.55)],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .opacity(keepOpacity)
+
+            LinearGradient(
+                colors: [Color.red.opacity(0.55), .clear],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .opacity(deleteOpacity)
+        }
+        .allowsHitTesting(false)
     }
 
     // MARK: - Badges
@@ -486,6 +526,25 @@ struct PhotoCardView: View {
             .padding(.horizontal, 14).padding(.vertical, 8)
             .background(Capsule().fill(Color(.systemOrange)).shadow(color: Color(.systemOrange).opacity(0.5), radius: 8))
             .padding(.top, 36)
+            Spacer()
+        }
+    }
+
+    // Undo button — shown on video/live photo since tap is reserved for play/pause
+    private var mediaUndoButton: some View {
+        VStack {
+            HStack {
+                Button { onTapUndo() } label: {
+                    Image(systemName: "arrow.uturn.backward")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 36, height: 36)
+                        .background(.black.opacity(0.45), in: Circle())
+                }
+                .padding(.leading, 14)
+                .padding(.top, 14)
+                Spacer()
+            }
             Spacer()
         }
     }

@@ -135,7 +135,7 @@ struct GlobalReviewView: View {
                     .fill(Theme.surface).scaleEffect(0.93).offset(y: 11)
                     .shadow(color: .black.opacity(0.3), radius: 12, y: 5)
             }
-            PhotoCardView(photoID: pendingIDs[currentIndex], onSwipe: { handleSwipe($0) }, onTapUndo: { undoLast() })
+            PhotoCardView(photoID: pendingIDs[currentIndex], onSwipe: { handleSwipe($0) }, onTapUndo: { undoLast() }, externalFlyout: .constant(nil))
                 .id(cardID)
                 .environment(vm)
                 .environment(lm)

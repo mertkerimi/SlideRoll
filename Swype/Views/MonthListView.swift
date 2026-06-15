@@ -76,6 +76,8 @@ struct MonthListView: View {
                 .blur(radius: 60)
                 .offset(x: 140, y: -100)
         }
+        .drawingGroup()
+        .allowsHitTesting(false)
     }
 
     // MARK: Year List
@@ -94,7 +96,7 @@ struct MonthListView: View {
 
                 LazyVStack(spacing: 14) {
                     ForEach(Array(vm.yearGroups.enumerated()), id: \.element.id) { index, year in
-                        NavigationLink(value: year) {
+                        Button { navPath.append(year) } label: {
                             YearCard(year: year).environment(lm)
                         }
                         .buttonStyle(.plain)
@@ -151,16 +153,15 @@ struct MonthListView: View {
                     .padding(.bottom, 6)
             }
 
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Theme.surfaceHigh)
-                        .frame(height: 6)
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Theme.accentGradient)
-                        .frame(width: geo.size.width * progress, height: 6)
-                        .animation(.spring(response: 0.7, dampingFraction: 0.8), value: progress)
-                }
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Theme.surfaceHigh)
+                    .frame(height: 6)
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Theme.accentGradient)
+                    .frame(maxWidth: .infinity, maxHeight: 6)
+                    .scaleEffect(x: progress, y: 1, anchor: .leading)
+                    .animation(.spring(response: 0.7, dampingFraction: 0.8), value: progress)
             }
             .frame(height: 6)
 
@@ -295,7 +296,6 @@ struct YearCard: View {
     let year: YearGroup
     @Environment(LanguageManager.self) var lm
     @Environment(\.colorScheme) var colorScheme
-    @State private var appeared = false
 
     var body: some View {
         let s = lm.s
@@ -321,14 +321,12 @@ struct YearCard: View {
                 statBlock(value: "\(year.months.count)", label: s.monthLabel, color: Theme.accent)
             }
 
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Theme.surfaceHigh).frame(height: 5)
-                    Capsule()
-                        .fill(progressGradient)
-                        .frame(width: geo.size.width * (appeared ? year.progress : 0), height: 5)
-                        .animation(.spring(response: 0.8, dampingFraction: 0.8).delay(0.1), value: appeared)
-                }
+            ZStack(alignment: .leading) {
+                Capsule().fill(Theme.surfaceHigh).frame(height: 5)
+                Capsule()
+                    .fill(progressGradient)
+                    .frame(maxWidth: .infinity, maxHeight: 5)
+                    .scaleEffect(x: year.progress, y: 1, anchor: .leading)
             }
             .frame(height: 5)
         }
@@ -339,17 +337,14 @@ struct YearCard: View {
                 .overlay(
                     RoundedRectangle(cornerRadius: 22, style: .continuous)
                         .fill(cardGradientOverlay)
-                        .animation(.easeInOut(duration: 0.4), value: year.progress)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 22, style: .continuous)
                         .stroke(cardBorderColor, lineWidth: 1)
-                        .animation(.easeInOut(duration: 0.4), value: year.progress)
                 )
         )
-        .shadow(color: cardShadowColor.opacity(0.12), radius: 16, y: 6)
-        .onAppear { appeared = true }
-        .onDisappear { appeared = false }
+        .compositingGroup()
+        .shadow(color: cardShadowColor.opacity(0.10), radius: 10, y: 4)
     }
 
     private var cardOpacity: Double { colorScheme == .dark ? 0.08 : 0.14 }
