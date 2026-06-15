@@ -67,38 +67,38 @@ struct Strings {
     var shuffleHint: String    { pick("Tüm fotoğrafları karışık incele", "Review all photos in shuffle mode", "Alle Fotos zufällig überprüfen") }
 
     func photosSelected(_ n: Int) -> String { pick(
-        "\(n) fotoğraf seçildi",
-        "\(n) photos selected",
-        "\(n) Fotos ausgewählt"
+        "\(n.fmtCount) fotoğraf seçildi",
+        "\(n.fmtCount) photos selected",
+        "\(n.fmtCount) Fotos ausgewählt"
     )}
     func monthsAndPhotos(months: Int, photos: Int) -> String { pick(
-        "\(months) ay · \(photos) fotoğraf",
-        "\(months) months · \(photos) photos",
-        "\(months) Monate · \(photos) Fotos"
+        "\(months) ay · \(photos.fmtCount) fotoğraf",
+        "\(months) months · \(photos.fmtCount) photos",
+        "\(months) Monate · \(photos.fmtCount) Fotos"
     )}
     func monthsPhotosAndVideos(months: Int, photos: Int, videos: Int) -> String {
         let base = pick(
-            "\(months) ay · \(photos) fotoğraf",
-            "\(months) months · \(photos) photos",
-            "\(months) Monate · \(photos) Fotos"
+            "\(months) ay · \(photos.fmtCount) fotoğraf",
+            "\(months) months · \(photos.fmtCount) photos",
+            "\(months) Monate · \(photos.fmtCount) Fotos"
         )
         guard videos > 0 else { return base }
-        let videoStr = pick("\(videos) video", "\(videos) videos", "\(videos) Videos")
+        let videoStr = pick("\(videos.fmtCount) video", "\(videos.fmtCount) videos", "\(videos.fmtCount) Videos")
         return base + " · " + videoStr
     }
     func photosReviewedOf(reviewed: Int, total: Int) -> String { pick(
-        "\(reviewed) / \(total) fotoğraf incelendi",
-        "\(reviewed) / \(total) photos reviewed",
-        "\(reviewed) / \(total) Fotos überprüft"
+        "\(reviewed.fmtCount) / \(total.fmtCount) fotoğraf incelendi",
+        "\(reviewed.fmtCount) / \(total.fmtCount) photos reviewed",
+        "\(reviewed.fmtCount) / \(total.fmtCount) Fotos überprüft"
     )}
     func photosReviewedOfWithVideos(reviewed: Int, total: Int, videos: Int) -> String {
         let base = pick(
-            "\(reviewed) / \(total) fotoğraf incelendi",
-            "\(reviewed) / \(total) photos reviewed",
-            "\(reviewed) / \(total) Fotos überprüft"
+            "\(reviewed.fmtCount) / \(total.fmtCount) fotoğraf incelendi",
+            "\(reviewed.fmtCount) / \(total.fmtCount) photos reviewed",
+            "\(reviewed.fmtCount) / \(total.fmtCount) Fotos überprüft"
         )
         guard videos > 0 else { return base }
-        let videoStr = pick("\(videos) video", "\(videos) videos", "\(videos) Videos")
+        let videoStr = pick("\(videos.fmtCount) video", "\(videos.fmtCount) videos", "\(videos.fmtCount) Videos")
         return base + " · " + videoStr
     }
 
@@ -120,14 +120,14 @@ struct Strings {
     )}
     var monthCompleted: String { pick("Bu ay tamamlandı!", "This month is done!", "Dieser Monat ist fertig!") }
     func photosReviewedCount(_ n: Int) -> String { pick(
-        "\(n) fotoğraf incelendi",
-        "\(n) photos reviewed",
-        "\(n) Fotos überprüft"
+        "\(n.fmtCount) fotoğraf incelendi",
+        "\(n.fmtCount) photos reviewed",
+        "\(n.fmtCount) Fotos überprüft"
     )}
     func permanentlyDelete(_ n: Int) -> String { pick(
-        "\(n) fotoğrafı kalıcı sil",
-        "Permanently delete \(n) photos",
-        "\(n) Fotos dauerhaft löschen"
+        "\(n.fmtCount) fotoğrafı kalıcı sil",
+        "Permanently delete \(n.fmtCount) photos",
+        "\(n.fmtCount) Fotos dauerhaft löschen"
     )}
     var keptDone: String    { pick("Tutuldu",  "Kept",    "Behalten") }
     var skippedDone: String { pick("Atlandı",  "Skipped", "Übersprungen") }
@@ -151,24 +151,24 @@ struct Strings {
         "Nach links gewischte Fotos erscheinen hier."
     )}
     func photosCount(_ n: Int) -> String { pick(
-        "\(n) fotoğraf",
-        "\(n) photos",
-        "\(n) Fotos"
+        "\(n.fmtCount) fotoğraf",
+        "\(n.fmtCount) photos",
+        "\(n.fmtCount) Fotos"
     )}
     func permanentlyDeleteN(_ n: Int) -> String { pick(
-        "\(n) fotoğrafı kalıcı sil",
-        "Permanently delete \(n) photos",
-        "\(n) Fotos dauerhaft löschen"
+        "\(n.fmtCount) fotoğrafı kalıcı sil",
+        "Permanently delete \(n.fmtCount) photos",
+        "\(n.fmtCount) Fotos dauerhaft löschen"
     )}
     func permanentlyDeleteButton(_ n: Int) -> String { pick(
-        "\(n) Fotoğrafı Kalıcı Sil",
-        "Permanently Delete \(n) Photos",
-        "\(n) Fotos dauerhaft löschen"
+        "\(n.fmtCount) Fotoğrafı Kalıcı Sil",
+        "Permanently Delete \(n.fmtCount) Photos",
+        "\(n.fmtCount) Fotos dauerhaft löschen"
     )}
     func permanentlyDeleteMsg(_ n: Int) -> String { pick(
-        "\(n) fotoğraf cihazınızdan kalıcı olarak silinecek.",
-        "\(n) photos will be permanently deleted from your device.",
-        "\(n) Fotos werden dauerhaft von Ihrem Gerät gelöscht."
+        "\(n.fmtCount) fotoğraf cihazınızdan kalıcı olarak silinecek.",
+        "\(n.fmtCount) photos will be permanently deleted from your device.",
+        "\(n.fmtCount) Fotos werden dauerhaft von Ihrem Gerät gelöscht."
     )}
 
     // MARK: - Onboarding
@@ -263,9 +263,9 @@ struct Strings {
     var dupCompletedSub: String { pick("Tüm kopya grupları incelendi.", "All duplicate groups reviewed.", "Alle Duplikatgruppen überprüft.") }
 
     func statItemCount(_ n: Int) -> String { pick(
-        "\(n) öğe",
-        "\(n) items",
-        "\(n) Elemente"
+        "\(n.fmtCount) öğe",
+        "\(n.fmtCount) items",
+        "\(n.fmtCount) Elemente"
     )}
 
     // MARK: - Date formatting
@@ -307,8 +307,10 @@ struct Strings {
 
     // MARK: - Daily Stats
     func todayCount(_ n: Int) -> String {
-        pick("Bugün \(n) fotoğraf incelendi 🔥", "\(n) photos reviewed today 🔥", "Heute \(n) Fotos bewertet 🔥")
+        pick("Bugün \(n.fmtCount) fotoğraf incelendi 🔥", "\(n.fmtCount) photos reviewed today 🔥", "Heute \(n.fmtCount) Fotos bewertet 🔥")
     }
+
+    var videoLoadError: String { pick("Video yüklenemedi", "Video could not be loaded", "Video konnte nicht geladen werden") }
 
     // MARK: - Helper
     private func pick(_ tr: [String], _ en: [String], _ de: [String]) -> [String] {

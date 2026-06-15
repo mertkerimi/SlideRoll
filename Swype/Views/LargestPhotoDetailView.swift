@@ -129,7 +129,7 @@ struct LargestPhotoDetailView: View {
                                 Image(systemName: "exclamationmark.triangle.fill")
                                     .font(.system(size: 32))
                                     .foregroundStyle(.white.opacity(0.4))
-                                Text("Video yüklenemedi")
+                                Text(lm.s.videoLoadError)
                                     .font(.system(size: 13, weight: .medium))
                                     .foregroundStyle(.white.opacity(0.4))
                             }

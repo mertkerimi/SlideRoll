@@ -21,31 +21,23 @@ struct SettingsView: View {
 
                 // MARK: Language
                 Section {
-                    ForEach(AppLanguage.allCases) { lang in
-                        Button {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                lm.selected = lang
-                            }
-                        } label: {
-                            HStack(spacing: 14) {
-                                Text(lang.flag)
-                                    .font(.system(size: 26))
-                                Text(lang.displayName)
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundStyle(Theme.textPrimary)
-                                Spacer()
-                                if lm.selected == lang {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(size: 20))
-                                        .foregroundStyle(Theme.accent)
-                                        .transition(.scale.combined(with: .opacity))
-                                }
-                            }
-                            .padding(.vertical, 4)
-                            .contentShape(Rectangle())
+                    @Bindable var lm = lm
+                    Picker(selection: $lm.selected) {
+                        ForEach(AppLanguage.allCases) { lang in
+                            Text("\(lang.flag)  \(lang.displayName)").tag(lang)
                         }
-                        .buttonStyle(.plain)
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "globe")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(Theme.accent)
+                            Text(lm.s.languageLabel)
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundStyle(Theme.textPrimary)
+                        }
                     }
+                    .pickerStyle(.menu)
+                    .tint(Theme.accent)
                 } header: {
                     Text(lm.s.languageLabel)
                         .font(.system(size: 12, weight: .semibold))
@@ -158,63 +150,48 @@ struct SettingsView: View {
             }
             .tint(Theme.accent)
 
-            #if DEBUG
-            if notif.enabled {
-                Button {
-                    notif.cancelAll()
-                    notif.reschedule(language: lm.selected)
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "bolt.fill")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(Theme.orange)
-                        Text("Test — her 10 saniyede 6 bildirim gönder")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(Theme.orange)
-                    }
-                    .padding(.vertical, 2)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-            #endif
         }
     }
 
     // MARK: - Color Palette
 
     private var colorPalette: some View {
-        HStack(spacing: 0) {
+        let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 5)
+        return LazyVGrid(columns: columns, spacing: 14) {
             ForEach(ColorTheme.allCases) { theme in
                 Button {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
                         lm.selectedTheme = theme
                     }
                 } label: {
-                    VStack(spacing: 8) {
+                    VStack(spacing: 6) {
                         ZStack {
                             Circle()
                                 .fill(theme.gradient)
-                                .frame(width: 42, height: 42)
-                                .shadow(color: theme.accent.opacity(0.4), radius: 8, y: 3)
+                                .frame(width: 40, height: 40)
+                                .shadow(color: theme.accent.opacity(lm.selectedTheme == theme ? 0.55 : 0.25),
+                                        radius: lm.selectedTheme == theme ? 10 : 5, y: 3)
+                                .scaleEffect(lm.selectedTheme == theme ? 1.12 : 1.0)
+                                .animation(.spring(response: 0.3), value: lm.selectedTheme)
 
                             if lm.selectedTheme == theme {
                                 Image(systemName: "checkmark")
-                                    .font(.system(size: 14, weight: .black))
+                                    .font(.system(size: 13, weight: .black))
                                     .foregroundStyle(.white)
                                     .transition(.scale.combined(with: .opacity))
                             }
                         }
-
-                        Text(theme.displayName)
-                            .font(.system(size: 10, weight: lm.selectedTheme == theme ? .semibold : .regular))
+                        Text(theme.displayName(in: lm.selected))
+                            .font(.system(size: 9, weight: lm.selectedTheme == theme ? .semibold : .regular))
                             .foregroundStyle(lm.selectedTheme == theme ? theme.accent : Theme.textTertiary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+
                     }
-                    .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
     }
 }

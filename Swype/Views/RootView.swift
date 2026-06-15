@@ -59,6 +59,17 @@ struct RootView: View {
                 .padding(.bottom, 24)
         }
         .ignoresSafeArea(edges: .bottom)
+        .onOpenURL { url in
+            guard url.scheme == "swype" else { return }
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) { selectedTab = .home }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                if url.host == "year", let year = url.pathComponents.dropFirst().first {
+                    NotificationCenter.default.post(name: .widgetOpenYear, object: year)
+                } else if url.host == "shuffle" {
+                    NotificationCenter.default.post(name: .widgetOpenShuffle, object: nil)
+                }
+            }
+        }
         .overlayPreferenceValue(TourAnchorKey.self) { anchors in
             if showTour {
                 GeometryReader { proxy in

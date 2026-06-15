@@ -51,3 +51,8 @@ enum Theme {
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
 }
+
+extension Int {
+    /// Binlik ayraçlı format — cihaz locale'i kullanır (TR: 14.506, EN: 14,506)
+    var fmtCount: String { formatted(.number) }
+}

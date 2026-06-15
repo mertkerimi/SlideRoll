@@ -15,6 +15,8 @@ enum TourTarget: Hashable {
 
 extension Notification.Name {
     static let tourNavigateToFirstYear = Notification.Name("tourNavigateToFirstYear")
+    static let widgetOpenYear = Notification.Name("widgetOpenYear")
+    static let widgetOpenShuffle = Notification.Name("widgetOpenShuffle")
 }
 
 struct TourAnchorModifier: ViewModifier {
