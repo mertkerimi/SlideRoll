@@ -56,31 +56,8 @@ struct WidgetStrings {
 
 // MARK: - Theme Color
 
-private func accentColor(for raw: String) -> Color {
-    switch raw {
-    case "purple": return Color(red: 0.60, green: 0.30, blue: 1.00)
-    case "mint":   return Color(red: 0.10, green: 0.78, blue: 0.55)
-    case "orange": return Color(red: 1.00, green: 0.55, blue: 0.10)
-    case "pink":   return Color(red: 1.00, green: 0.25, blue: 0.65)
-    case "red":    return Color(red: 0.95, green: 0.18, blue: 0.22)
-    case "gold":   return Color(red: 0.95, green: 0.78, blue: 0.10)
-    case "cyan":   return Color(red: 0.05, green: 0.78, blue: 0.95)
-    case "indigo": return Color(red: 0.35, green: 0.25, blue: 0.90)
-    default:       return Color(red: 0.25, green: 0.55, blue: 1.00)
-    }
-}
-private func accentColorEnd(for raw: String) -> Color {
-    switch raw {
-    case "purple": return Color(red: 0.85, green: 0.40, blue: 1.00)
-    case "mint":   return Color(red: 0.05, green: 0.90, blue: 0.70)
-    case "orange": return Color(red: 1.00, green: 0.75, blue: 0.00)
-    case "pink":   return Color(red: 1.00, green: 0.50, blue: 0.80)
-    case "red":    return Color(red: 1.00, green: 0.42, blue: 0.28)
-    case "gold":   return Color(red: 1.00, green: 0.92, blue: 0.35)
-    case "cyan":   return Color(red: 0.15, green: 0.92, blue: 1.00)
-    case "indigo": return Color(red: 0.55, green: 0.40, blue: 1.00)
-    default:       return Color(red: 0.10, green: 0.78, blue: 0.88)
-    }
+private extension ColorTheme {
+    static func resolve(_ raw: String) -> ColorTheme { ColorTheme(rawValue: raw) ?? .blue }
 }
 
 // MARK: - Provider
@@ -118,11 +95,12 @@ struct SwypeProvider: TimelineProvider {
             }
         }
 
+        let resolved = ColorTheme.resolve(theme)
         return SwypeEntry(date: .now, pending: pending, total: total, reviewed: reviewed,
                           savingsBytes: savings, todayCount: today,
                           deletedCount: deleted, keptCount: kept,
                           years: years,
-                          themeColor: accentColor(for: theme), themeColorEnd: accentColorEnd(for: theme),
+                          themeColor: resolved.accent, themeColorEnd: resolved.accentEnd,
                           lang: lang)
     }
 
@@ -133,7 +111,7 @@ struct SwypeProvider: TimelineProvider {
                    years: [YearStat(year: "2026", total: 300, reviewed: 120),
                             YearStat(year: "2025", total: 400, reviewed: 380),
                             YearStat(year: "2024", total: 100, reviewed: 158)],
-                   themeColor: accentColor(for: "blue"), themeColorEnd: accentColorEnd(for: "blue"),
+                   themeColor: ColorTheme.blue.accent, themeColorEnd: ColorTheme.blue.accentEnd,
                    lang: "tr")
     }
 }
@@ -634,7 +612,7 @@ struct SwypeWidgetBundle: WidgetBundle {
     SwypeEntry(date: .now, pending: 142, total: 800, reviewed: 658,
                savingsBytes: 1_200_000_000, todayCount: 47,
                deletedCount: 312, keptCount: 346,
-               years: [], themeColor: accentColor(for: "blue"),
-               themeColorEnd: accentColorEnd(for: "blue"), lang: "tr")
+               years: [], themeColor: ColorTheme.blue.accent,
+               themeColorEnd: ColorTheme.blue.accentEnd, lang: "tr")
 }
 

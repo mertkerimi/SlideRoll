@@ -460,8 +460,12 @@ struct MonthsForYearView: View {
     @State private var selectedGroup: MonthGroup?
     @State private var showTrash = false
 
-    private var currentYear: YearGroup? {
-        vm.yearGroups.first(where: { $0.id == year.id })
+    // Read monthGroups directly so @Observable fires immediately on any decision change,
+    // without relying on the yearGroups→currentYear computed chain.
+    private var currentMonths: [MonthGroup] {
+        vm.monthGroups
+            .filter { String($0.id.prefix(4)) == year.id }
+            .sorted { $0.id > $1.id }
     }
 
     var body: some View {
@@ -470,7 +474,7 @@ struct MonthsForYearView: View {
 
             ScrollView(showsIndicators: false) {
                 LazyVStack(spacing: 10) {
-                    ForEach(Array((currentYear?.months ?? year.months).enumerated()), id: \.element.id) { index, group in
+                    ForEach(Array(currentMonths.enumerated()), id: \.element.id) { index, group in
                         MonthCard(group: group).environment(lm)
                             .onTapGesture { selectedGroup = group }
                             .anchorPreference(key: TourAnchorKey.self, value: .bounds) { anchor in

@@ -11,6 +11,7 @@
 		E074B5BD2FDB29BA00650DD6 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E074B5BC2FDB29BA00650DD6 /* WidgetKit.framework */; };
 		E074B5BF2FDB29BA00650DD6 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E074B5BE2FDB29BA00650DD6 /* SwiftUI.framework */; };
 		E074B5CA2FDB29BC00650DD6 /* SwypeWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E074B5BA2FDB29BA00650DD6 /* SwypeWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		E0SHARED01AABBCC00112233 /* ColorTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0SHARED00AABBCC00112233 /* ColorTheme.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -38,6 +39,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		E0SHARED00AABBCC00112233 /* ColorTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ColorTheme.swift; path = Swype/ColorTheme.swift; sourceTree = SOURCE_ROOT; };
 		E074B5BA2FDB29BA00650DD6 /* SwypeWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SwypeWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		E074B5BC2FDB29BA00650DD6 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		E074B5BE2FDB29BA00650DD6 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
@@ -244,6 +246,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E0SHARED01AABBCC00112233 /* ColorTheme.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

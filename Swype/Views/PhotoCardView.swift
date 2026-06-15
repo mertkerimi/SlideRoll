@@ -45,6 +45,10 @@ struct PhotoCardView: View {
     @State private var lastZoomOffset: CGSize = .zero
     private var isZoomed: Bool { scale > 1.01 }
 
+    private let lightImpact  = UIImpactFeedbackGenerator(style: .light)
+    private let heavyImpact  = UIImpactFeedbackGenerator(style: .heavy)
+    private let mediumImpact = UIImpactFeedbackGenerator(style: .medium)
+
     private var dragDirection: SwipeDirection {
         let w = offset.width, h = offset.height
         if abs(w) > abs(h) * 0.8 {
@@ -101,10 +105,18 @@ struct PhotoCardView: View {
             }
         }
         .task {
+            lightImpact.prepare()
+            heavyImpact.prepare()
+            mediumImpact.prepare()
             isVideo = vm.isVideo(for: photoID)
             isLivePhoto = vm.isLivePhoto(for: photoID)
             isInCloud = vm.isInCloud(for: photoID)
-            image = await vm.loadImage(for: photoID, targetSize: CGSize(width: 700, height: 900))
+            // Phase 1: show thumbnail immediately (prevents blank card)
+            image = await vm.loadThumbnail(for: photoID)
+            // Phase 2: upgrade to full quality
+            if let full = await vm.loadImage(for: photoID, targetSize: CGSize(width: 700, height: 900)) {
+                image = full
+            }
             if isLivePhoto {
                 let lp = await vm.loadLivePhoto(for: photoID, targetSize: CGSize(width: 700, height: 900))
                 livePhoto = lp
@@ -117,9 +129,9 @@ struct PhotoCardView: View {
         }
         .onChange(of: dragDirection) { _, newDir in
             switch newDir {
-            case .keep:   UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            case .delete: UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
-            case .skip:   UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            case .keep:   lightImpact.impactOccurred()
+            case .delete: heavyImpact.impactOccurred()
+            case .skip:   mediumImpact.impactOccurred()
             case .none:   break
             }
         }
