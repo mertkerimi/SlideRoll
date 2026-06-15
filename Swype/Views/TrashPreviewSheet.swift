@@ -8,6 +8,7 @@ import AVKit
 struct TrashPreviewSheet: View {
     let photoID: String
     @Environment(PhotoLibraryViewModel.self) var vm
+    @Environment(LanguageManager.self) var lm
     @Environment(\.dismiss) var dismiss
 
     @State private var stage: Stage = .loading
@@ -55,7 +56,7 @@ struct TrashPreviewSheet: View {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 36))
                         .foregroundStyle(.white.opacity(0.5))
-                    Text("Yüklenemedi")
+                    Text(lm.s.videoLoadError)
                         .font(.system(size: 15, weight: .medium))
                         .foregroundStyle(.white.opacity(0.6))
                 }
