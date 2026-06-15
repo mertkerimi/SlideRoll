@@ -39,12 +39,12 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		E0SHARED00AABBCC00112233 /* ColorTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ColorTheme.swift; path = Swype/ColorTheme.swift; sourceTree = SOURCE_ROOT; };
 		E074B5BA2FDB29BA00650DD6 /* SwypeWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SwypeWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		E074B5BC2FDB29BA00650DD6 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		E074B5BE2FDB29BA00650DD6 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		E074B5D12FDB2A6400650DD6 /* SwypeWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SwypeWidgetExtension.entitlements; sourceTree = "<group>"; };
 		E0BE94192FD06C2F002A1CC6 /* Swype.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Swype.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E0SHARED00AABBCC00112233 /* ColorTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ColorTheme.swift; path = Swype/ColorTheme.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -104,6 +104,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		E051588B2FE086D90005C590 /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				E0SHARED00AABBCC00112233 /* ColorTheme.swift */,
+			);
+			name = "Recovered References";
+			sourceTree = "<group>";
+		};
 		E074B5BB2FDB29BA00650DD6 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -121,6 +129,7 @@
 				E074B5C02FDB29BA00650DD6 /* SwypeWidget */,
 				E074B5BB2FDB29BA00650DD6 /* Frameworks */,
 				E0BE941A2FD06C2F002A1CC6 /* Products */,
+				E051588B2FE086D90005C590 /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};

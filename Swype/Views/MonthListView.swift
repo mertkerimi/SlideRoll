@@ -146,7 +146,7 @@ struct MonthListView: View {
         let progress = totalPhotos > 0 ? Double(totalReviewed) / Double(totalPhotos) : 0
         let s = lm.s
 
-        return VStack(alignment: .leading, spacing: 16) {
+        return VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text(s.overallProgress)
                     .font(.system(size: 13, weight: .semibold))
@@ -174,35 +174,38 @@ struct MonthListView: View {
                 }
             }
 
-            HStack(alignment: .bottom, spacing: 6) {
-                Text(totalReviewed.fmtCount)
-                    .font(.system(size: 40, weight: .bold, design: .rounded))
-                    .foregroundStyle(Theme.textPrimary)
-                Text("/ \(totalPhotos.fmtCount)")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(Theme.textSecondary)
-                    .padding(.bottom, 6)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .bottom, spacing: 6) {
+                    Text(totalReviewed.fmtCount)
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text("/ \(totalPhotos.fmtCount)")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(Theme.textSecondary)
+                        .padding(.bottom, 4)
+                }
+
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Theme.surfaceHigh)
+                        .frame(height: 6)
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Theme.accentGradient)
+                        .frame(maxWidth: .infinity, maxHeight: 6)
+                        .scaleEffect(x: progress, y: 1, anchor: .leading)
+                        .animation(.spring(response: 0.7, dampingFraction: 0.8), value: progress)
+                }
+                .frame(height: 6)
             }
 
-            ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Theme.surfaceHigh)
-                    .frame(height: 6)
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Theme.accentGradient)
-                    .frame(maxWidth: .infinity, maxHeight: 6)
-                    .scaleEffect(x: progress, y: 1, anchor: .leading)
-                    .animation(.spring(response: 0.7, dampingFraction: 0.8), value: progress)
-            }
-            .frame(height: 6)
-
-            HStack(spacing: 20) {
+            HStack(spacing: 0) {
                 summaryChip(value: "\(vm.toDeleteIDs.count)", label: s.toDeleteStat, color: Theme.red)
+                Divider().frame(height: 28).padding(.horizontal, 8)
                 summaryChip(value: String(format: "%0.f%%", progress * 100), label: s.completedLabel, color: Theme.green)
+                Divider().frame(height: 28).padding(.horizontal, 8)
                 summaryChip(value: "\(vm.yearGroups.count)", label: s.yearLabel, color: Theme.accent)
             }
 
-            // Shuffle button
             Button { showShuffle = true } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "shuffle")
@@ -212,7 +215,7 @@ struct MonthListView: View {
                 }
                 .foregroundStyle(Theme.accent)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
+                .padding(.vertical, 11)
                 .background(Theme.accent.opacity(0.10), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Theme.accent.opacity(0.20), lineWidth: 1))
             }
@@ -233,7 +236,7 @@ struct MonthListView: View {
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .padding(20)
+        .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(Theme.surface)

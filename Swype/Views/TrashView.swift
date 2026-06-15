@@ -9,6 +9,7 @@ struct TrashView: View {
     @State private var isDeleting = false
     @State private var deleteError: String?
     @State private var allSelected = false
+    @State private var previewID: String? = nil
 
     private let columns = [
         GridItem(.flexible(), spacing: 6),
@@ -59,6 +60,13 @@ struct TrashView: View {
                 }
             }
         }
+        .sheet(item: Binding(
+            get: { previewID.map { TrashPreviewItem(id: $0) } },
+            set: { previewID = $0?.id }
+        )) { item in
+            TrashPreviewSheet(photoID: item.id)
+                .environment(vm)
+        }
         .confirmationDialog(s.cannotUndo, isPresented: $showConfirm, titleVisibility: .visible) {
             Button(s.permanentlyDeleteN(vm.toDeleteIDs.count), role: .destructive) {
                 Task { await permanentDelete() }
@@ -89,11 +97,15 @@ struct TrashView: View {
         ScrollView(showsIndicators: false) {
             LazyVGrid(columns: columns, spacing: 6) {
                 ForEach(vm.toDeleteIDs, id: \.self) { id in
-                    TrashThumbnailView(photoID: id) {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            vm.removeFromTrash(photoID: id)
-                        }
-                    }
+                    TrashThumbnailView(
+                        photoID: id,
+                        onRemove: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                vm.removeFromTrash(photoID: id)
+                            }
+                        },
+                        onPreview: { previewID = id }
+                    )
                     .environment(vm)
                     .transition(.asymmetric(
                         insertion: .scale(scale: 0.8).combined(with: .opacity),
@@ -213,34 +225,63 @@ struct TrashView: View {
     }
 }
 
+// MARK: - Identifiable wrapper for sheet(item:)
+
+struct TrashPreviewItem: Identifiable { let id: String }
+
 // MARK: - Thumbnail
 
 struct TrashThumbnailView: View {
     let photoID: String
     let onRemove: () -> Void
+    let onPreview: () -> Void
 
     @Environment(PhotoLibraryViewModel.self) var vm
     @State private var image: UIImage?
+    @State private var isVideo = false
+    @State private var isLive = false
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            Group {
-                if let img = image {
-                    Image(uiImage: img)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } else {
-                    Theme.surface
-                        .overlay(ProgressView().tint(Theme.accent).scaleEffect(0.7))
-                }
-            }
-            .frame(height: 120)
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Theme.border, lineWidth: 1)
-            )
+            Color.clear
+                .aspectRatio(1, contentMode: .fill)
+                .overlay(
+                    Group {
+                        if let img = image {
+                            Image(uiImage: img)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } else {
+                            Theme.surface
+                                .overlay(ProgressView().tint(Theme.accent).scaleEffect(0.7))
+                        }
+                    }
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Theme.border, lineWidth: 1)
+                )
+                .onTapGesture { onPreview() }
 
+            // Media type badge (bottom-left)
+            if isVideo || isLive {
+                VStack {
+                    Spacer()
+                    HStack {
+                        Image(systemName: isVideo ? "play.fill" : "livephoto")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(4)
+                            .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 5))
+                        Spacer()
+                    }
+                    .padding(5)
+                }
+                .allowsHitTesting(false)
+            }
+
+            // Remove button (top-right)
             Button { onRemove() } label: {
                 ZStack {
                     Circle()
@@ -254,7 +295,9 @@ struct TrashThumbnailView: View {
             .padding(5)
         }
         .task {
-            image = await vm.loadImage(for: photoID, targetSize: CGSize(width: 240, height: 240))
+            isVideo = vm.isVideo(for: photoID)
+            isLive  = vm.isLivePhoto(for: photoID)
+            image = await vm.loadThumbnail(for: photoID)
         }
     }
 }
