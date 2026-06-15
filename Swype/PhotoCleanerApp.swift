@@ -1,6 +1,7 @@
 import SwiftUI
 import Photos
 import GoogleMobileAds
+import AppTrackingTransparency
 
 @main
 struct PhotoCleanerApp: App {
@@ -14,6 +15,14 @@ struct PhotoCleanerApp: App {
         MobileAds.shared.start(completionHandler: nil)
     }
 
+    private func requestTrackingIfNeeded() {
+        guard #available(iOS 14.5, *) else { return }
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            await ATTrackingManager.requestTrackingAuthorization()
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -25,6 +34,7 @@ struct PhotoCleanerApp: App {
                     let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
                     if status == .authorized || status == .limited {
                         await vm.loadPhotos()
+                        requestTrackingIfNeeded()
                     }
                     await notif.refreshStatus()
                     notif.reschedule(language: lm.selected)
