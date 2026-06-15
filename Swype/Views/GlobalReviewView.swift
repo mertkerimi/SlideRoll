@@ -1,4 +1,5 @@
 import SwiftUI
+import Photos
 
 struct GlobalReviewView: View {
     @Environment(PhotoLibraryViewModel.self) var vm
@@ -9,14 +10,25 @@ struct GlobalReviewView: View {
     @State private var pendingIDs: [String] = []
     @State private var currentIndex: Int = 0
     @State private var decisionHistory: [(id: String, decision: PhotoDecision)] = []
+    @State private var sessionDecisions: [String: PhotoDecision] = [:]
     @State private var cardID = UUID()
+    @State private var cardFlyout: SwipeDirection? = nil
     @State private var showTrash = false
     @State private var swipeCount = 0
 
     private var isFinished: Bool { pendingIDs.isEmpty || currentIndex >= pendingIDs.count }
-    private var keepCount: Int   { vm.monthGroups.reduce(0) { $0 + $1.decisions.values.filter { $0 == .keep }.count } }
+    private var keepCount: Int   { sessionDecisions.values.filter { $0 == .keep }.count }
     private var deleteCount: Int { vm.toDeleteIDs.count }
-    private var skipCount: Int   { vm.monthGroups.reduce(0) { $0 + $1.decisions.values.filter { $0 == .skip }.count } }
+    private var skipCount: Int   { sessionDecisions.values.filter { $0 == .skip }.count }
+
+    private var currentPhotoDate: String? {
+        guard !isFinished, currentIndex < pendingIDs.count else { return nil }
+        guard let date = vm.asset(for: pendingIDs[currentIndex])?.creationDate else { return nil }
+        let fmt = DateFormatter()
+        fmt.dateFormat = "d MMMM yyyy"
+        fmt.locale = Locale(identifier: lm.selected == .turkish ? "tr_TR" : lm.selected == .german ? "de_DE" : "en_US")
+        return fmt.string(from: date)
+    }
 
     var body: some View {
         ZStack {
@@ -78,6 +90,12 @@ struct GlobalReviewView: View {
                 Text("\((currentIndex + 1).fmtCount) / \(pendingIDs.count.fmtCount)")
                     .font(.system(size: 12, weight: .medium, design: .rounded))
                     .foregroundStyle(Theme.textSecondary)
+                if let dateStr = currentPhotoDate {
+                    Text(dateStr)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Theme.textTertiary)
+                        .transition(.opacity)
+                }
             }
             HStack {
                 Button { dismiss() } label: {
@@ -135,10 +153,15 @@ struct GlobalReviewView: View {
                     .fill(Theme.surface).scaleEffect(0.93).offset(y: 11)
                     .shadow(color: .black.opacity(0.3), radius: 12, y: 5)
             }
-            PhotoCardView(photoID: pendingIDs[currentIndex], onSwipe: { handleSwipe($0) }, onTapUndo: { undoLast() }, externalFlyout: .constant(nil))
-                .id(cardID)
-                .environment(vm)
-                .environment(lm)
+            PhotoCardView(
+                photoID: pendingIDs[currentIndex],
+                onSwipe: { dir in cardFlyout = nil; handleSwipe(dir) },
+                onTapUndo: { undoLast() },
+                externalFlyout: $cardFlyout
+            )
+            .id(cardID)
+            .environment(vm)
+            .environment(lm)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -164,30 +187,47 @@ struct GlobalReviewView: View {
             HStack(spacing: 10) {
                 // Skip — leftmost
                 actionButton(icon: "clock", color: Theme.orange, bg: Theme.orange.opacity(0.15), border: false) {
-                    handleSwipe(.skip)
+                    cardFlyout = .skip
                 }
 
                 // Delete — equal center
-                Button { handleSwipe(.delete) } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 22, weight: .bold)).foregroundStyle(.white)
-                        .frame(maxWidth: .infinity).frame(height: 60)
-                        .background(Theme.redGradient, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                        .shadow(color: Theme.red.opacity(0.35), radius: 14, y: 6)
+                Button { cardFlyout = .delete } label: {
+                    VStack(spacing: 3) {
+                        Image(systemName: "xmark").font(.system(size: 18, weight: .bold))
+                        Text(lm.s.deleteBadge).font(.system(size: 11, weight: .bold, design: .rounded))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity).frame(height: 60)
+                    .background(Theme.redGradient, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .shadow(color: Theme.red.opacity(0.35), radius: 14, y: 6)
                 }
 
                 // Keep — equal center
-                Button { handleSwipe(.keep) } label: {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 22, weight: .bold)).foregroundStyle(.white)
-                        .frame(maxWidth: .infinity).frame(height: 60)
-                        .background(Theme.greenGradient, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                        .shadow(color: Theme.green.opacity(0.4), radius: 14, y: 6)
+                Button { cardFlyout = .keep } label: {
+                    VStack(spacing: 3) {
+                        Image(systemName: "checkmark").font(.system(size: 18, weight: .bold))
+                        Text(lm.s.keepBadge).font(.system(size: 11, weight: .bold, design: .rounded))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity).frame(height: 60)
+                    .background(Theme.greenGradient, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .shadow(color: Theme.green.opacity(0.4), radius: 14, y: 6)
                 }
 
-                // Trash — rightmost
-                actionButton(icon: "trash", color: Theme.textSecondary, bg: Theme.surface, border: true) {
-                    showTrash = true
+                // Trash — rightmost, with badge
+                ZStack(alignment: .topTrailing) {
+                    actionButton(icon: "trash", color: Theme.textSecondary, bg: Theme.surface, border: true) {
+                        showTrash = true
+                    }
+                    if !vm.toDeleteIDs.isEmpty {
+                        Text("\(vm.toDeleteIDs.count)")
+                            .font(.system(size: 8, weight: .black))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, vm.toDeleteIDs.count >= 10 ? 5 : 3)
+                            .padding(.vertical, 3)
+                            .background(Theme.red, in: Capsule())
+                            .offset(x: vm.toDeleteIDs.count >= 10 ? 8 : 4, y: -4)
+                    }
                 }
             }
         }
@@ -282,6 +322,7 @@ struct GlobalReviewView: View {
         case .none:   return
         }
         vm.applyDecisionGlobal(decision, to: photoID)
+        sessionDecisions[photoID] = decision
         decisionHistory.append((id: photoID, decision: decision))
         vm.startCaching(ids: Array(pendingIDs.dropFirst(currentIndex + 1).prefix(8)),
                         targetSize: CGSize(width: 700, height: 900))
@@ -303,6 +344,7 @@ struct GlobalReviewView: View {
         guard !decisionHistory.isEmpty, currentIndex > 0 else { return }
         let last = decisionHistory.removeLast()
         vm.undoDecisionGlobal(for: last.id)
+        sessionDecisions.removeValue(forKey: last.id)
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
             currentIndex -= 1
         }

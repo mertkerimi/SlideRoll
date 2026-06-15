@@ -1,7 +1,16 @@
 import Foundation
 
+enum PhotoDecision: String, Codable {
+    case keep
+    case delete
+    case skip
+    case undecided
+}
+
 struct MonthGroup: Identifiable, Equatable {
-    static func == (lhs: MonthGroup, rhs: MonthGroup) -> Bool { lhs.id == rhs.id }
+    static func == (lhs: MonthGroup, rhs: MonthGroup) -> Bool {
+        lhs.id == rhs.id && lhs.decisions == rhs.decisions && lhs.photoIDs == rhs.photoIDs
+    }
     let id: String // "2026-01"
     let title: String  // "Ocak 2026"
     var photoIDs: [String]

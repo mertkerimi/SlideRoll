@@ -198,11 +198,16 @@ class PhotoLibraryViewModel {
             Self.sharedDefaults.set(encoded, forKey: "widgetYearData")
         }
         WidgetCenter.shared.reloadAllTimelines()
+        rebuildYearGroups()
     }
 
-    var yearGroups: [YearGroup] {
+    // Stored so @Observable directly tracks it — computed properties don't fire
+    // notifications reliably when their dependencies change via nested mutations.
+    private(set) var yearGroups: [YearGroup] = []
+
+    private func rebuildYearGroups() {
         let grouped = Dictionary(grouping: monthGroups) { String($0.id.prefix(4)) }
-        return grouped.map { year, months in
+        yearGroups = grouped.map { year, months in
             YearGroup(id: year, title: year, months: months.sorted { $0.id > $1.id })
         }.sorted { $0.id > $1.id }
     }
@@ -288,7 +293,9 @@ class PhotoLibraryViewModel {
 
     func applyDecision(_ decision: PhotoDecision, to photoID: String, in groupID: String) {
         guard let idx = monthGroups.firstIndex(where: { $0.id == groupID }) else { return }
-        monthGroups[idx].decisions[photoID] = decision
+        var groups = monthGroups
+        groups[idx].decisions[photoID] = decision
+        monthGroups = groups
 
         var saved = savedDecisions
         saved[photoID] = decision.rawValue
@@ -299,28 +306,35 @@ class PhotoLibraryViewModel {
         } else {
             toDeleteIDs.removeAll { $0 == photoID }
         }
+        rebuildYearGroups()
         incrementDailyCount()
     }
 
     func undoDecision(for photoID: String, in groupID: String) {
         guard let idx = monthGroups.firstIndex(where: { $0.id == groupID }) else { return }
-        monthGroups[idx].decisions[photoID] = .undecided
+        var groups = monthGroups
+        groups[idx].decisions[photoID] = .undecided
+        monthGroups = groups
 
         var saved = savedDecisions
         saved.removeValue(forKey: photoID)
         savedDecisions = saved
 
         toDeleteIDs.removeAll { $0 == photoID }
+        rebuildYearGroups()
     }
 
     func resetGroupDecisions(groupID: String) {
         guard let idx = monthGroups.firstIndex(where: { $0.id == groupID }) else { return }
         let photoIDs = monthGroups[idx].photoIDs
         toDeleteIDs.removeAll { photoIDs.contains($0) }
-        monthGroups[idx].decisions = [:]
+        var groups = monthGroups
+        groups[idx].decisions = [:]
+        monthGroups = groups
         var saved = savedDecisions
         for id in photoIDs { saved.removeValue(forKey: id) }
         savedDecisions = saved
+        rebuildYearGroups()
     }
 
     // Applies a decision without knowing the group — searches all groups
@@ -368,12 +382,15 @@ class PhotoLibraryViewModel {
 
     func removeFromTrash(photoID: String) {
         toDeleteIDs.removeAll { $0 == photoID }
-        for idx in monthGroups.indices {
-            if monthGroups[idx].decisions[photoID] == .delete {
-                monthGroups[idx].decisions[photoID] = .undecided
+        var groups = monthGroups
+        for idx in groups.indices {
+            if groups[idx].decisions[photoID] == .delete {
+                groups[idx].decisions[photoID] = .undecided
+                monthGroups = groups
                 var saved = savedDecisions
                 saved.removeValue(forKey: photoID)
                 savedDecisions = saved
+                rebuildYearGroups()
                 break
             }
         }
@@ -397,30 +414,51 @@ class PhotoLibraryViewModel {
         Self.sharedDefaults.set(totalDeletedCount, forKey: "widgetDeletedCount")
         WidgetCenter.shared.reloadAllTimelines()
         toDeleteIDs = []
-        for idx in monthGroups.indices {
+        var groups = monthGroups
+        for idx in groups.indices {
             for id in ids {
-                monthGroups[idx].decisions.removeValue(forKey: id)
-                monthGroups[idx].photoIDs.removeAll { $0 == id }
+                groups[idx].decisions.removeValue(forKey: id)
+                groups[idx].photoIDs.removeAll { $0 == id }
+            }
+        }
+        monthGroups = groups
+        rebuildYearGroups()
+    }
+
+    // Returns a fast low-res thumbnail — almost instant, used to prevent blank card
+    func loadThumbnail(for id: String) async -> UIImage? {
+        guard let asset = allAssets[id] else { return nil }
+        return await withCheckedContinuation { continuation in
+            let options = PHImageRequestOptions()
+            options.deliveryMode = .fastFormat
+            options.resizeMode = .fast
+            options.isSynchronous = false
+            var resumed = false
+            imageManager.requestImage(for: asset, targetSize: CGSize(width: 300, height: 400),
+                                      contentMode: .aspectFill, options: options) { image, _ in
+                guard !resumed else { return }
+                resumed = true
+                continuation.resume(returning: image)
             }
         }
     }
 
+    // Returns the full-quality image, skipping any degraded intermediate delivery
     func loadImage(for id: String, targetSize: CGSize) async -> UIImage? {
         guard let asset = allAssets[id] else { return nil }
         return await withCheckedContinuation { continuation in
             let options = PHImageRequestOptions()
             options.isNetworkAccessAllowed = true
-            options.deliveryMode = .highQualityFormat
+            options.deliveryMode = .opportunistic
             options.resizeMode = .fast
             options.isSynchronous = false
             var resumed = false
             imageManager.requestImage(for: asset, targetSize: targetSize, contentMode: .aspectFill, options: options) { image, info in
                 guard !resumed else { return }
                 let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
-                if !isDegraded {
-                    resumed = true
-                    continuation.resume(returning: image)
-                }
+                if isDegraded { return }
+                resumed = true
+                continuation.resume(returning: image)
             }
         }
     }
@@ -529,6 +567,8 @@ class PhotoLibraryViewModel {
         let assets = ids.compactMap { allAssets[$0] }
         let options = PHImageRequestOptions()
         options.isNetworkAccessAllowed = true
+        options.deliveryMode = .highQualityFormat
+        options.resizeMode = .fast
         imageManager.startCachingImages(for: assets, targetSize: targetSize, contentMode: .aspectFill, options: options)
     }
 }
