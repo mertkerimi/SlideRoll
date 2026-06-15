@@ -23,6 +23,7 @@ struct PhotoCardView: View {
     @State private var player: AVPlayer?
     @State private var isVideoLoading = false
     @State private var isPlaying = false
+    @State private var isMuted = false
     @State private var currentTime: Double = 0
     @State private var videoDurationSecs: Double = 0
     @State private var isSeeking = false
@@ -161,6 +162,8 @@ struct PhotoCardView: View {
         PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
             DispatchQueue.main.async {
                 guard let avAsset else { self.isVideoLoading = false; return }
+                try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+                try? AVAudioSession.sharedInstance().setActive(true)
                 let p = AVPlayer(playerItem: AVPlayerItem(asset: avAsset))
                 p.play()
                 self.player = p
@@ -193,6 +196,8 @@ struct PhotoCardView: View {
     private func loadLivePhotoAndPlay() {
         guard !isLivePhotoLoading else { return }
         isLivePhotoLoading = true
+        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+        try? AVAudioSession.sharedInstance().setActive(true)
         Task {
             let lp = await vm.loadLivePhoto(for: photoID, targetSize: CGSize(width: 700, height: 900))
             livePhoto = lp
@@ -314,6 +319,17 @@ struct PhotoCardView: View {
                             Text(formatDuration(videoDurationSecs))
                                 .font(.system(size: 12, weight: .semibold, design: .rounded))
                                 .foregroundStyle(.white.opacity(0.7))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(.black.opacity(0.6), in: Capsule())
+                        }
+                        Button {
+                            isMuted.toggle()
+                            player?.isMuted = isMuted
+                        } label: {
+                            Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.white)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
                                 .background(.black.opacity(0.6), in: Capsule())

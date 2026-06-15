@@ -9,6 +9,12 @@ struct MonthListView: View {
     @State private var showTrash = false
     @State private var showShuffle = false
     @State private var navPath: [YearGroup] = []
+    @State private var resumeGroup: MonthGroup? = nil
+
+    private var lastReviewedGroup: MonthGroup? {
+        guard let id = UserDefaults.standard.string(forKey: "lastReviewedMonthID") else { return nil }
+        return vm.monthGroups.first(where: { $0.id == id && !$0.isCompleted })
+    }
 
     var body: some View {
         NavigationStack(path: $navPath) {
@@ -41,6 +47,9 @@ struct MonthListView: View {
             }
             .sheet(isPresented: $showTrash) {
                 TrashView().environment(vm).environment(lm)
+            }
+            .sheet(item: $resumeGroup) { group in
+                ReviewView(group: group).environment(vm).environment(lm).environment(adManager)
             }
             .fullScreenCover(isPresented: $showShuffle) {
                 GlobalReviewView().environment(vm).environment(lm).environment(adManager)
@@ -138,10 +147,32 @@ struct MonthListView: View {
         let s = lm.s
 
         return VStack(alignment: .leading, spacing: 16) {
-            Text(s.overallProgress)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Theme.textSecondary)
-                .tracking(0.8)
+            HStack {
+                Text(s.overallProgress)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Theme.textSecondary)
+                    .tracking(0.8)
+                Spacer()
+                if let group = lastReviewedGroup {
+                    Button { resumeGroup = group } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 9, weight: .bold))
+                            Text(s.actionContinue)
+                                .font(.system(size: 12, weight: .semibold))
+                            Text("· \(group.title)")
+                                .font(.system(size: 12, weight: .medium))
+                                .opacity(0.7)
+                        }
+                        .foregroundStyle(Theme.accent)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Theme.accent.opacity(0.12), in: Capsule())
+                        .overlay(Capsule().stroke(Theme.accent.opacity(0.2), lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
 
             HStack(alignment: .bottom, spacing: 6) {
                 Text(totalReviewed.fmtCount)
@@ -466,6 +497,11 @@ struct MonthsForYearView: View {
         }
         .sheet(isPresented: $showTrash) {
             TrashView().environment(vm).environment(lm)
+        }
+        .onChange(of: selectedGroup) { _, group in
+            if let group {
+                UserDefaults.standard.set(group.id, forKey: "lastReviewedMonthID")
+            }
         }
     }
 

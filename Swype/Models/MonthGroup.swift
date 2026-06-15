@@ -1,6 +1,7 @@
 import Foundation
 
-struct MonthGroup: Identifiable {
+struct MonthGroup: Identifiable, Equatable {
+    static func == (lhs: MonthGroup, rhs: MonthGroup) -> Bool { lhs.id == rhs.id }
     let id: String // "2026-01"
     let title: String  // "Ocak 2026"
     var photoIDs: [String]

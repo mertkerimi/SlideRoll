@@ -74,6 +74,8 @@ struct VideoPlayerSheet: View {
                     self.isLoading = false
                     return
                 }
+                try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+                try? AVAudioSession.sharedInstance().setActive(true)
                 let item = AVPlayerItem(asset: avAsset)
                 self.player = AVPlayer(playerItem: item)
                 self.player?.play()
