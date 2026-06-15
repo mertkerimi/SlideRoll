@@ -66,6 +66,7 @@ struct TrashView: View {
         )) { item in
             TrashPreviewSheet(photoID: item.id)
                 .environment(vm)
+                .environment(lm)
         }
         .confirmationDialog(s.cannotUndo, isPresented: $showConfirm, titleVisibility: .visible) {
             Button(s.permanentlyDeleteN(vm.toDeleteIDs.count), role: .destructive) {
