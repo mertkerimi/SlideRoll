@@ -328,6 +328,7 @@ struct MonthListView: View {
 
 struct YearCard: View {
     let year: YearGroup
+    @Environment(PhotoLibraryViewModel.self) var vm
     @Environment(LanguageManager.self) var lm
     @Environment(\.colorScheme) var colorScheme
 
@@ -349,6 +350,8 @@ struct YearCard: View {
 
             HStack(spacing: 0) {
                 statBlock(value: "\(year.reviewed)", label: s.reviewedLabel, color: Theme.green)
+                Divider().background(Theme.border).frame(height: 32).padding(.horizontal, 12)
+                statBlock(value: "\(vm.deletedCountByYear[year.id, default: 0])", label: s.statDeleted, color: Theme.red)
                 Divider().background(Theme.border).frame(height: 32).padding(.horizontal, 12)
                 statBlock(value: "\(year.total - year.reviewed)", label: s.pendingLabel, color: Theme.orange)
                 Divider().background(Theme.border).frame(height: 32).padding(.horizontal, 12)
@@ -556,6 +559,7 @@ struct MonthsForYearView: View {
 
 struct MonthCard: View {
     let group: MonthGroup
+    @Environment(PhotoLibraryViewModel.self) var vm
     @Environment(LanguageManager.self) var lm
     @Environment(\.colorScheme) var colorScheme
 
@@ -592,9 +596,11 @@ struct MonthCard: View {
                 HStack(spacing: 0) {
                     miniStat(icon: "checkmark", value: keepCount, color: Theme.green, label: s.keptStat)
                     miniDivider
-                    miniStat(icon: "trash", value: deleteCount, color: Theme.red, label: s.toDeleteStat)
+                    miniStat(icon: "trash.fill", value: vm.deletedCountByMonth[group.id, default: 0], color: Theme.red, label: s.statDeleted)
                     miniDivider
                     miniStat(icon: "clock", value: skipCount, color: Theme.orange, label: s.skippedStat)
+                    miniDivider
+                    miniStat(icon: "trash", value: deleteCount, color: Theme.red.opacity(0.7), label: s.toDeleteStat)
                     miniDivider
                     miniStat(icon: "photo", value: remaining, color: Theme.textTertiary, label: s.waitingStat)
                 }

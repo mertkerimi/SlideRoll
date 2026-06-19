@@ -51,6 +51,16 @@ class PhotoLibraryViewModel {
         set { UserDefaults.standard.set(newValue, forKey: "TotalDeletedCount") }
     }
 
+    var deletedCountByYear: [String: Int] {
+        get { UserDefaults.standard.dictionary(forKey: "DeletedCountByYear") as? [String: Int] ?? [:] }
+        set { UserDefaults.standard.set(newValue, forKey: "DeletedCountByYear") }
+    }
+
+    var deletedCountByMonth: [String: Int] {
+        get { UserDefaults.standard.dictionary(forKey: "DeletedCountByMonth") as? [String: Int] ?? [:] }
+        set { UserDefaults.standard.set(newValue, forKey: "DeletedCountByMonth") }
+    }
+
     let imageManager = PHCachingImageManager()
     private let persistenceKey = "PhotoCleanerDecisions"
     private var allAssets: [String: PHAsset] = [:]
@@ -426,6 +436,22 @@ class PhotoLibraryViewModel {
         var saved = savedDecisions
         for id in ids { saved.removeValue(forKey: id) }
         savedDecisions = saved
+        let yearFmt = DateFormatter()
+        yearFmt.dateFormat = "yyyy"
+        let monthFmt = DateFormatter()
+        monthFmt.dateFormat = "yyyy-MM"
+        var byYear = deletedCountByYear
+        var byMonth = deletedCountByMonth
+        for id in ids {
+            if let asset = allAssets[id] {
+                let date = asset.creationDate ?? Date()
+                byYear[yearFmt.string(from: date), default: 0] += 1
+                byMonth[monthFmt.string(from: date), default: 0] += 1
+            }
+        }
+        deletedCountByYear = byYear
+        deletedCountByMonth = byMonth
+
         totalDeletedCount += ids.count
         Self.sharedDefaults.set(totalDeletedCount, forKey: "widgetDeletedCount")
         WidgetCenter.shared.reloadAllTimelines()
