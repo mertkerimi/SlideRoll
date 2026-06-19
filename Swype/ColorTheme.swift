@@ -10,6 +10,7 @@ enum ColorTheme: String, CaseIterable, Identifiable {
     case gold   = "gold"
     case cyan   = "cyan"
     case indigo = "indigo"
+    case emerald = "emerald"
 
     var id: String { rawValue }
 
@@ -24,6 +25,7 @@ enum ColorTheme: String, CaseIterable, Identifiable {
         case .gold:   return Color(red: 0.95, green: 0.78, blue: 0.10)
         case .cyan:   return Color(red: 0.05, green: 0.78, blue: 0.95)
         case .indigo: return Color(red: 0.35, green: 0.25, blue: 0.90)
+        case .emerald: return Color(red: 0.13, green: 0.70, blue: 0.35)
         }
     }
 
@@ -38,6 +40,7 @@ enum ColorTheme: String, CaseIterable, Identifiable {
         case .gold:   return Color(red: 1.00, green: 0.92, blue: 0.35)
         case .cyan:   return Color(red: 0.15, green: 0.92, blue: 1.00)
         case .indigo: return Color(red: 0.55, green: 0.40, blue: 1.00)
+        case .emerald: return Color(red: 0.30, green: 0.88, blue: 0.50)
         }
     }
 
