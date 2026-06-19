@@ -23,9 +23,9 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Fotoğraflarını düzenlemek, kopyaları bulmak ve depolama alanı kazanmana yardımcı olmak için fotoğraf kütüphanenize erişim gerekiyor.</string>
+	<string>Swype needs access to your photo library so you can review, organize, and delete photos to free up storage.</string>
 	<key>NSUserTrackingUsageDescription</key>
-	<string>Sana daha alakalı reklamlar gösterebilmek için kullanılır.</string>
+	<string>This is used to show you more relevant ads.</string>
 	<key>SKAdNetworkItems</key>
 	<array>
 		<dict>
