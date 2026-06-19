@@ -165,7 +165,7 @@ struct SettingsView: View {
 
     // MARK: - About / Legal Rows
 
-    private static let privacyPolicyURL = URL(string: "https://mertkerimi.github.io/Swype/privacy-policy.html")!
+    private static let privacyPolicyURL = URL(string: "https://mertkerimi.github.io/swype-legal/privacy-policy.html")!
     private static let supportEmail = "metomonto@gmail.com"
 
     private var appVersion: String {
