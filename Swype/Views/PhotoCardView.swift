@@ -123,6 +123,9 @@ struct PhotoCardView: View {
                 isLivePhotoPlaying = true
             }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(lm.s.a11yPhoto)
+        .accessibilityHint(lm.s.a11ySwipeHint)
         .onChange(of: externalFlyout) { _, dir in
             guard let dir, dir != .none else { return }
             flyOut(dir, fromButton: true)
