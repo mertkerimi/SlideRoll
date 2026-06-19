@@ -33,7 +33,7 @@ final class LanguageManager {
     init() {
         let savedLang  = UserDefaults.standard.string(forKey: Self.langKey) ?? ""
         let savedTheme = UserDefaults.standard.string(forKey: Self.themeKey) ?? ""
-        selected      = AppLanguage(rawValue: savedLang)  ?? .turkish
+        selected      = AppLanguage(rawValue: savedLang)  ?? .english
         selectedTheme = ColorTheme(rawValue: savedTheme)  ?? .blue
 
         // Apply persisted theme & language on launch

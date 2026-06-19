@@ -1,8 +1,8 @@
 import SwiftUI
 
 enum AppLanguage: String, CaseIterable, Identifiable {
-    case turkish = "tr"
     case english = "en"
+    case turkish = "tr"
     case german  = "de"
 
     var id: String { rawValue }
