@@ -32,26 +32,25 @@ struct SwypeEntry: TimelineEntry {
 
 struct WidgetStrings {
     let lang: String
-    private func p(_ tr: String, _ en: String, _ de: String) -> String {
-        switch lang {
-        case "tr": return tr
-        case "de": return de
-        default:   return en
-        }
+    // Order: en, tr, es, fr, it, pt, de, ja, ko, zh, ar, ru
+    private static let order = ["en","tr","es","fr","it","pt","de","ja","ko","zh","ar","ru"]
+    private func p(_ v: [String]) -> String {
+        let i = Self.order.firstIndex(of: lang) ?? 0
+        return i < v.count ? v[i] : v[0]
     }
-    var continueBtn: String  { p("Devam Et",       "Continue",       "Weiter") }
-    var pending: String      { p("bekliyor",        "pending",        "ausstehend") }
-    var reviewed: String     { p("incelendi",       "reviewed",       "geprüft") }
-    var kept: String         { p("tutuldu",         "kept",           "behalten") }
-    var deleted: String      { p("silindi",         "deleted",        "gelöscht") }
-    var savings: String      { p("tasarruf",        "saved",          "gespart") }
-    var today: String        { p("bugün",           "today",          "heute") }
-    var done: String         { p("tamam",           "done",           "fertig") }
-    var waitingPhotos: String{ p("fotoğraf bekliyor","photos pending", "Fotos ausstehend") }
-    var byYear: String       { p("YILLARA GÖRE İLERLEME", "BY YEAR", "NACH JAHR") }
-    var level: String        { p("Seviye",          "Level",          "Level") }
-    func completed(_ pct: Int) -> String { p("%\(pct) tamamlandı", "\(pct)% done", "\(pct)% erledigt") }
-    func reviewedOf(_ pct: Int) -> String { p("%\(pct) incelendi", "\(pct)% reviewed", "\(pct)% geprüft") }
+    var continueBtn: String  { p(["Continue","Devam Et","Continuar","Continuer","Continua","Continuar","Weiter","続ける","계속","继续","متابعة","Продолжить"]) }
+    var pending: String      { p(["pending","bekliyor","pendientes","en attente","in attesa","pendentes","ausstehend","保留中","대기","待处理","قيد الانتظار","в ожидании"]) }
+    var reviewed: String     { p(["reviewed","incelendi","revisadas","examinées","esaminate","revisadas","geprüft","確認済み","검토됨","已查看","تمت المراجعة","просмотрено"]) }
+    var kept: String         { p(["kept","tutuldu","conservadas","conservées","tenute","mantidas","behalten","保持","유지","保留","محتفظ","оставлено"]) }
+    var deleted: String      { p(["deleted","silindi","eliminadas","supprimées","eliminate","excluídas","gelöscht","削除済み","삭제됨","已删除","تم حذفها","удалено"]) }
+    var savings: String      { p(["saved","tasarruf","liberado","libéré","liberato","liberado","gespart","空き","확보","已释放","تم توفيره","сэкономлено"]) }
+    var today: String        { p(["today","bugün","hoy","aujourd'hui","oggi","hoje","heute","今日","오늘","今天","اليوم","сегодня"]) }
+    var done: String         { p(["done","tamam","listo","terminé","fatto","concluído","fertig","完了","완료","完成","تم","готово"]) }
+    var waitingPhotos: String{ p(["photos pending","fotoğraf bekliyor","fotos pendientes","photos en attente","foto in attesa","fotos pendentes","Fotos ausstehend","枚の写真が保留中","사진 대기 중","张照片待处理","صورة قيد الانتظار","фото в ожидании"]) }
+    var byYear: String       { p(["BY YEAR","YILLARA GÖRE İLERLEME","POR AÑO","PAR ANNÉE","PER ANNO","POR ANO","NACH JAHR","年別","연도별","按年份","حسب السنة","ПО ГОДАМ"]) }
+    var level: String        { p(["Level","Seviye","Nivel","Niveau","Livello","Nível","Level","レベル","레벨","等级","المستوى","Уровень"]) }
+    func completed(_ pct: Int) -> String { p(["\(pct)% done","%\(pct) tamamlandı","\(pct)% completado","\(pct)% terminé","\(pct)% completato","\(pct)% concluído","\(pct)% erledigt","\(pct)% 完了","\(pct)% 완료","\(pct)% 完成","\(pct)% مكتمل","\(pct)% завершено"]) }
+    func reviewedOf(_ pct: Int) -> String { p(["\(pct)% reviewed","%\(pct) incelendi","\(pct)% revisadas","\(pct)% examinées","\(pct)% esaminate","\(pct)% revisadas","\(pct)% geprüft","\(pct)% 確認済み","\(pct)% 검토됨","\(pct)% 已查看","\(pct)% تمت المراجعة","\(pct)% просмотрено"]) }
 }
 
 // MARK: - Theme Color
