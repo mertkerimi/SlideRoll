@@ -106,6 +106,7 @@ struct GlobalReviewView: View {
                         .background(Theme.surface, in: Circle())
                         .overlay(Circle().stroke(Theme.border, lineWidth: 1))
                 }
+                .accessibilityLabel(lm.s.close)
                 Spacer()
             }
         }
@@ -186,7 +187,7 @@ struct GlobalReviewView: View {
 
             HStack(spacing: 10) {
                 // Skip — leftmost
-                actionButton(icon: "clock", color: Theme.orange, bg: Theme.orange.opacity(0.15), border: false) {
+                actionButton(icon: "clock", color: Theme.orange, bg: Theme.orange.opacity(0.15), border: false, a11y: lm.s.laterBadge) {
                     cardFlyout = .skip
                 }
 
@@ -201,6 +202,7 @@ struct GlobalReviewView: View {
                     .background(Theme.redGradient, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                     .shadow(color: Theme.red.opacity(0.35), radius: 14, y: 6)
                 }
+                .accessibilityLabel(lm.s.deleteBadge)
 
                 // Keep — equal center
                 Button { cardFlyout = .keep } label: {
@@ -213,10 +215,11 @@ struct GlobalReviewView: View {
                     .background(Theme.greenGradient, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                     .shadow(color: Theme.green.opacity(0.4), radius: 14, y: 6)
                 }
+                .accessibilityLabel(lm.s.keepBadge)
 
                 // Trash — rightmost, with badge
                 ZStack(alignment: .topTrailing) {
-                    actionButton(icon: "trash", color: Theme.textSecondary, bg: Theme.surface, border: true) {
+                    actionButton(icon: "trash", color: Theme.textSecondary, bg: Theme.surface, border: true, a11y: lm.s.a11yTrash) {
                         showTrash = true
                     }
                     if !vm.toDeleteIDs.isEmpty {
@@ -249,13 +252,14 @@ struct GlobalReviewView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private func actionButton(icon: String, color: Color, bg: Color, border: Bool, action: @escaping () -> Void) -> some View {
+    private func actionButton(icon: String, color: Color, bg: Color, border: Bool, a11y: String = "", action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: icon).font(.system(size: 18, weight: .semibold)).foregroundStyle(color)
                 .frame(width: 54, height: 60)
                 .background(bg, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .overlay(border ? RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Theme.border, lineWidth: 1) : nil)
         }
+        .accessibilityLabel(a11y)
     }
 
     // MARK: - Completed
