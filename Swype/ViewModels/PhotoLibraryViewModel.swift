@@ -40,7 +40,7 @@ class PhotoLibraryViewModel {
     var trashBytes: Int64 {
         toDeleteIDs.compactMap { allAssets[$0] }.reduce(0) { sum, asset in
             sum + PHAssetResource.assetResources(for: asset).reduce(0) {
-                $0 + ((($1.value(forKey: "fileSize") as? Int64) ?? 0))
+                $0 + Self.resourceBytes($1)
             }
         }
     }
@@ -102,10 +102,33 @@ class PhotoLibraryViewModel {
     }
 
     // MARK: - iCloud Check
-    func isInCloud(for id: String) -> Bool {
+    // Uses the public PHImageResultIsInCloudKey instead of a private KVC key.
+    // Requests a tiny image with network disabled; if it isn't available
+    // locally, Photos reports it as in iCloud.
+    func isInCloud(for id: String) async -> Bool {
         guard let asset = allAssets[id] else { return false }
-        let resources = PHAssetResource.assetResources(for: asset)
-        return resources.contains { !($0.value(forKey: "locallyAvailable") as? Bool ?? true) }
+        return await withCheckedContinuation { continuation in
+            let options = PHImageRequestOptions()
+            options.isNetworkAccessAllowed = false
+            options.deliveryMode = .fastFormat
+            options.resizeMode = .fast
+            options.isSynchronous = false
+            var resumed = false
+            imageManager.requestImage(for: asset, targetSize: CGSize(width: 64, height: 64),
+                                      contentMode: .aspectFill, options: options) { _, info in
+                guard !resumed else { return }
+                resumed = true
+                let inCloud = (info?[PHImageResultIsInCloudKey] as? Bool) ?? false
+                continuation.resume(returning: inCloud)
+            }
+        }
+    }
+
+    // PHAssetResource exposes a file's byte size only through KVC ("fileSize");
+    // there is no public API for an exact size. Centralized here so it's the
+    // single place to revisit. nonisolated so background tasks can call it.
+    nonisolated static func resourceBytes(_ resource: PHAssetResource) -> Int64 {
+        (resource.value(forKey: "fileSize") as? Int64) ?? 0
     }
 
     init() {
@@ -191,7 +214,7 @@ class PhotoLibraryViewModel {
             group.photoIDs.filter { (group.decisions[$0] ?? .undecided) == .keep }
         }
         let savingsBytes = deleteIDs.compactMap { allAssets[$0] }.reduce(Int64(0)) { sum, asset in
-            sum + PHAssetResource.assetResources(for: asset).reduce(0) { $0 + ($1.value(forKey: "fileSize") as? Int64 ?? 0) }
+            sum + PHAssetResource.assetResources(for: asset).reduce(0) { $0 + Self.resourceBytes($1) }
         }
         Self.sharedDefaults.set(undecided,           forKey: "widgetPendingCount")
         Self.sharedDefaults.set(total,               forKey: "widgetTotalCount")
@@ -387,7 +410,7 @@ class PhotoLibraryViewModel {
         return await Task.detached(priority: .utility) {
             assets.reduce(0) { sum, asset in
                 sum + PHAssetResource.assetResources(for: asset).reduce(0) {
-                    $0 + (($1.value(forKey: "fileSize") as? Int64) ?? 0)
+                    $0 + Self.resourceBytes($1)
                 }
             }
         }.value
@@ -400,7 +423,7 @@ class PhotoLibraryViewModel {
         return await Task.detached(priority: .utility) {
             assets.reduce(0) { sum, asset in
                 sum + PHAssetResource.assetResources(for: asset).reduce(0) {
-                    $0 + (($1.value(forKey: "fileSize") as? Int64) ?? 0)
+                    $0 + Self.resourceBytes($1)
                 }
             }
         }.value
@@ -547,7 +570,7 @@ class PhotoLibraryViewModel {
             photoFetch.enumerateObjects { asset, _, _ in
                 var size: Int64 = 0
                 for resource in PHAssetResource.assetResources(for: asset) {
-                    size += (resource.value(forKey: "fileSize") as? Int64) ?? 0
+                    size += Self.resourceBytes(resource)
                 }
                 pBytes += size
                 if asset.isFavorite { favorites += 1 }
@@ -575,7 +598,7 @@ class PhotoLibraryViewModel {
             videoFetch.enumerateObjects { asset, _, _ in
                 var size: Int64 = 0
                 for resource in PHAssetResource.assetResources(for: asset) {
-                    size += (resource.value(forKey: "fileSize") as? Int64) ?? 0
+                    size += Self.resourceBytes(resource)
                 }
                 vBytes += size
                 let date = asset.creationDate ?? Date.distantPast
