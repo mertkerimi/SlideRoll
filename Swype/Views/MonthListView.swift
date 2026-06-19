@@ -160,7 +160,7 @@ struct MonthListView: View {
                                 .font(.system(size: 9, weight: .bold))
                             Text(s.actionContinue)
                                 .font(.system(size: 12, weight: .semibold))
-                            Text("· \(group.title)")
+                            Text("· \(s.monthTitle(from: group.id))")
                                 .font(.system(size: 12, weight: .medium))
                                 .opacity(0.7)
                         }

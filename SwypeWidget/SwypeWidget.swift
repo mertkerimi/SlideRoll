@@ -34,9 +34,9 @@ struct WidgetStrings {
     let lang: String
     private func p(_ tr: String, _ en: String, _ de: String) -> String {
         switch lang {
-        case "en": return en
+        case "tr": return tr
         case "de": return de
-        default:   return tr
+        default:   return en
         }
     }
     var continueBtn: String  { p("Devam Et",       "Continue",       "Weiter") }
@@ -80,7 +80,7 @@ struct SwypeProvider: TimelineProvider {
         let count     = shared?.integer(forKey: "dailyDecisionCount")  ?? 0
         let dateStr   = shared?.string(forKey: "dailyDecisionDate")    ?? ""
         let theme     = shared?.string(forKey: "widgetTheme")     ?? "blue"
-        let lang      = shared?.string(forKey: "widgetLanguage")   ?? "tr"
+        let lang      = shared?.string(forKey: "widgetLanguage")   ?? "en"
         let fmt = DateFormatter(); fmt.dateFormat = "yyyy-MM-dd"
         let today = fmt.string(from: .now) == dateStr ? count : 0
 

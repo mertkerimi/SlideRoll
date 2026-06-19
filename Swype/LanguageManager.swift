@@ -30,10 +30,21 @@ final class LanguageManager {
 
     var s: Strings { Strings(language: selected) }
 
+    /// The device's preferred language if Swype supports it, else English.
+    private static func deviceLanguage() -> AppLanguage {
+        for lang in Locale.preferredLanguages {
+            let code = String(lang.prefix(2)).lowercased()
+            if let match = AppLanguage(rawValue: code) { return match }
+        }
+        return .english
+    }
+
     init() {
         let savedLang  = UserDefaults.standard.string(forKey: Self.langKey) ?? ""
         let savedTheme = UserDefaults.standard.string(forKey: Self.themeKey) ?? ""
-        selected      = AppLanguage(rawValue: savedLang)  ?? .english
+        // On first launch (no saved language) match the device language if we
+        // support it, otherwise fall back to English.
+        selected      = AppLanguage(rawValue: savedLang) ?? Self.deviceLanguage()
         selectedTheme = ColorTheme(rawValue: savedTheme)  ?? .blue
 
         // Apply persisted theme & language on launch
