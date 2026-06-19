@@ -14,29 +14,48 @@ final class AdManager: NSObject {
     private var interstitial: InterstitialAd?
     private(set) var isReady = false
 
+    // MARK: - Frequency policy
+    private let launchGrace: TimeInterval = 20     // no ads in the first 20s of a session
+    private let cooldown: TimeInterval     = 60    // minimum seconds between interstitials
+    private let appStart = Date()
+    private var lastShownAt: Date?
+    private var retryDelay: UInt64 = 2             // seconds, exponential backoff on load failure
+
     override init() {
         super.init()
         Task { await load() }
     }
 
+    // MARK: - Load (with backoff retry so ads recover after a transient failure)
     func load() async {
         do {
-            interstitial = try await InterstitialAd.load(
-                with: adUnitID,
-                request: Request()
-            )
+            interstitial = try await InterstitialAd.load(with: adUnitID, request: Request())
             interstitial?.fullScreenContentDelegate = self
             isReady = true
+            retryDelay = 2
         } catch {
             isReady = false
+            try? await Task.sleep(nanoseconds: retryDelay * 1_000_000_000)
+            retryDelay = min(retryDelay * 2, 64)
+            await load()
         }
     }
 
-    func showIfReady(from vc: UIViewController? = nil) {
-        guard isReady, let ad = interstitial else { return }
-        let root = vc ?? topViewController()
-        guard let root else { return }
+    /// Presents an interstitial only when it's appropriate: an ad is loaded, the
+    /// launch grace has passed, and the cooldown since the last ad has elapsed.
+    /// Call this at natural break points; the policy keeps it non-intrusive.
+    func maybeShow(from vc: UIViewController? = nil) {
+        guard isReady else { return }
+        let now = Date()
+        guard now.timeIntervalSince(appStart) >= launchGrace else { return }
+        if let last = lastShownAt, now.timeIntervalSince(last) < cooldown { return }
+        present(from: vc)
+    }
+
+    private func present(from vc: UIViewController?) {
+        guard let ad = interstitial, let root = vc ?? topViewController() else { return }
         ad.present(from: root)
+        lastShownAt = Date()
         isReady = false
     }
 

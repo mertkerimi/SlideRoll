@@ -10,8 +10,11 @@ final class NotificationManager {
     var permissionStatus: UNAuthorizationStatus = .notDetermined
 
     #if DEBUG
-    private static let debugCount = 10
+    private static let debugCount = 3
     #endif
+    // Number of weekly reminders scheduled ahead, and the local hour they fire at.
+    private static let weeklyCount = 8
+    private static let reminderHour = 11
 
     // MARK: - Permission
 
@@ -38,25 +41,31 @@ final class NotificationManager {
         guard enabled, permissionStatus == .authorized || permissionStatus == .provisional
         else { return }
 
-        let msgs = messages(language)
+        let msgs = messages(language).shuffled()
 
         #if DEBUG
+        // Quick cadence so reminders can actually be tested in a session.
         for i in 0..<Self.debugCount {
             let msg = msgs[i % msgs.count]
-            schedule(id: "swype.debug\(i)", delay: TimeInterval((i + 1) * 1800),
+            schedule(id: "swype.remind\(i)", delay: TimeInterval((i + 1) * 20),
                      title: msg.0, body: msg.1)
         }
         #else
-        schedule(id: "swype.remind1", delay: 3 * 24 * 3600, title: msgs[0].0, body: msgs[0].1)
-        schedule(id: "swype.remind2", delay: 7 * 24 * 3600, title: msgs[1].0, body: msgs[1].1)
+        // Weekly nudges at a pleasant local hour, with rotating copy. Rescheduled
+        // on every launch, so active users are never nagged — only lapsed ones.
+        for i in 0..<Self.weeklyCount {
+            let msg = msgs[i % msgs.count]
+            scheduleWeekly(id: "swype.remind\(i)", weeksFromNow: i + 1,
+                           title: msg.0, body: msg.1)
+        }
         #endif
     }
 
     func cancelAll() {
         #if DEBUG
-        let ids = (0..<Self.debugCount).map { "swype.debug\($0)" }
+        let ids = (0..<Self.debugCount).map { "swype.remind\($0)" }
         #else
-        let ids = ["swype.remind1", "swype.remind2"]
+        let ids = (0..<Self.weeklyCount).map { "swype.remind\($0)" }
         #endif
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
     }
@@ -69,6 +78,23 @@ final class NotificationManager {
         content.body  = body
         content.sound = .default
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false)
+        let req = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
+        UNUserNotificationCenter.current().add(req)
+    }
+
+    /// Fires `weeksFromNow` weeks from now at the configured local hour.
+    private func scheduleWeekly(id: String, weeksFromNow: Int, title: String, body: String) {
+        let cal = Calendar.current
+        guard let day = cal.date(byAdding: .day, value: weeksFromNow * 7, to: Date()) else { return }
+        var comps = cal.dateComponents([.year, .month, .day], from: day)
+        comps.hour = Self.reminderHour
+        comps.minute = 0
+
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body  = body
+        content.sound = .default
+        let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
         let req = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
         UNUserNotificationCenter.current().add(req)
     }

@@ -36,14 +36,6 @@ class PhotoLibraryViewModel {
     var statsLoading = false
     private var statsLoaded = false
 
-    // Trash size — computed on demand
-    var trashBytes: Int64 {
-        toDeleteIDs.compactMap { allAssets[$0] }.reduce(0) { sum, asset in
-            sum + PHAssetResource.assetResources(for: asset).reduce(0) {
-                $0 + Self.resourceBytes($1)
-            }
-        }
-    }
 
     // Cumulative stats — persisted across sessions
     var totalDeletedCount: Int {
@@ -213,15 +205,23 @@ class PhotoLibraryViewModel {
         let keptIDs = built.flatMap { group in
             group.photoIDs.filter { (group.decisions[$0] ?? .undecided) == .keep }
         }
-        let savingsBytes = deleteIDs.compactMap { allAssets[$0] }.reduce(Int64(0)) { sum, asset in
-            sum + PHAssetResource.assetResources(for: asset).reduce(0) { $0 + Self.resourceBytes($1) }
-        }
         Self.sharedDefaults.set(undecided,           forKey: "widgetPendingCount")
         Self.sharedDefaults.set(total,               forKey: "widgetTotalCount")
         Self.sharedDefaults.set(reviewed,            forKey: "widgetReviewedCount")
-        Self.sharedDefaults.set(savingsBytes,        forKey: "widgetSavingsBytes")
         Self.sharedDefaults.set(totalDeletedCount,   forKey: "widgetDeletedCount")
         Self.sharedDefaults.set(keptIDs.count,       forKey: "widgetKeptCount")
+
+        // Savings bytes — computed off the main thread. Reading PHAsset resources
+        // on the main queue triggers on-demand metadata fetches that can stutter
+        // on large delete lists.
+        let deleteAssets = deleteIDs.compactMap { allAssets[$0] }
+        Task.detached(priority: .utility) {
+            let savingsBytes = deleteAssets.reduce(Int64(0)) { sum, asset in
+                sum + PHAssetResource.assetResources(for: asset).reduce(0) { $0 + Self.resourceBytes($1) }
+            }
+            Self.sharedDefaults.set(savingsBytes, forKey: "widgetSavingsBytes")
+            WidgetCenter.shared.reloadAllTimelines()
+        }
 
         // Year breakdown for large widget
         let yearData = Dictionary(grouping: built) { String($0.id.prefix(4)) }
