@@ -314,6 +314,12 @@ struct Strings {
 
     var videoLoadError: String { pick("Video yüklenemedi", "Video could not be loaded", "Video konnte nicht geladen werden") }
 
+    // MARK: - About / Legal
+    var aboutSection: String   { pick("Hakkında", "About", "Über") }
+    var privacyPolicy: String  { pick("Gizlilik Politikası", "Privacy Policy", "Datenschutzerklärung") }
+    var contactSupport: String { pick("İletişim & Destek", "Contact & Support", "Kontakt & Support") }
+    var versionLabel: String   { pick("Sürüm", "Version", "Version") }
+
     // MARK: - Helper
     private func pick(_ tr: [String], _ en: [String], _ de: [String]) -> [String] {
         switch language {

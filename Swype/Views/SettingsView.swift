@@ -53,6 +53,16 @@ struct SettingsView: View {
                         .foregroundStyle(Theme.textSecondary)
                         .textCase(nil)
                 }
+
+                // MARK: About / Legal
+                Section {
+                    aboutRows
+                } header: {
+                    Text(lm.s.aboutSection)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Theme.textSecondary)
+                        .textCase(nil)
+                }
             }
             .scrollContentBackground(.hidden)
         }
@@ -151,6 +161,67 @@ struct SettingsView: View {
             .tint(Theme.accent)
 
         }
+    }
+
+    // MARK: - About / Legal Rows
+
+    private static let privacyPolicyURL = URL(string: "https://mertkerimi.github.io/Swype/privacy-policy.html")!
+    private static let supportEmail = "metomonto@gmail.com"
+
+    private var appVersion: String {
+        let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let b = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        return "\(v) (\(b))"
+    }
+
+    @ViewBuilder
+    private var aboutRows: some View {
+        let s = lm.s
+
+        Link(destination: Self.privacyPolicyURL) {
+            aboutRow(icon: "hand.raised.fill", title: s.privacyPolicy, showChevron: true)
+        }
+        .buttonStyle(.plain)
+
+        if let mailURL = URL(string: "mailto:\(Self.supportEmail)") {
+            Link(destination: mailURL) {
+                aboutRow(icon: "envelope.fill", title: s.contactSupport, showChevron: true)
+            }
+            .buttonStyle(.plain)
+        }
+
+        HStack(spacing: 12) {
+            Image(systemName: "info.circle.fill")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Theme.accent).frame(width: 28)
+            Text(s.versionLabel)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(Theme.textPrimary)
+            Spacer()
+            Text(appVersion)
+                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .foregroundStyle(Theme.textSecondary)
+        }
+        .padding(.vertical, 3)
+    }
+
+    private func aboutRow(icon: String, title: String, showChevron: Bool) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Theme.accent).frame(width: 28)
+            Text(title)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(Theme.textPrimary)
+            Spacer()
+            if showChevron {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Theme.textTertiary)
+            }
+        }
+        .padding(.vertical, 3)
+        .contentShape(Rectangle())
     }
 
     // MARK: - Color Palette
