@@ -110,7 +110,7 @@ struct PhotoCardView: View {
             mediumImpact.prepare()
             isVideo = vm.isVideo(for: photoID)
             isLivePhoto = vm.isLivePhoto(for: photoID)
-            isInCloud = vm.isInCloud(for: photoID)
+            isInCloud = await vm.isInCloud(for: photoID)
             // Phase 1: show thumbnail immediately (prevents blank card)
             image = await vm.loadThumbnail(for: photoID)
             // Phase 2: upgrade to full quality
