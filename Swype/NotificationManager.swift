@@ -113,6 +113,8 @@ final class NotificationManager {
             ("Platz für neue Erinnerungen 🌅", "Alte Fotos löschen, damit neue ihren Platz finden."),
             ("Kurze Erinnerung 🔔", "Vergiss nicht, heute deine Galerie mit Swype zu prüfen.")
         ]
+        // Other languages fall back to English notification copy for now.
+        default: return messages(.english)
         }
     }
 }

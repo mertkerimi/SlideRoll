@@ -21,11 +21,8 @@ struct SettingsView: View {
 
                 // MARK: Language
                 Section {
-                    @Bindable var lm = lm
-                    Picker(selection: $lm.selected) {
-                        ForEach(AppLanguage.allCases) { lang in
-                            Text("\(lang.flag)  \(lang.displayName)").tag(lang)
-                        }
+                    NavigationLink {
+                        LanguageSelectionView().environment(lm)
                     } label: {
                         HStack(spacing: 12) {
                             Image(systemName: "globe")
@@ -34,10 +31,12 @@ struct SettingsView: View {
                             Text(lm.s.languageLabel)
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundStyle(Theme.textPrimary)
+                            Spacer()
+                            Text(lm.selected.displayName)
+                                .font(.system(size: 14))
+                                .foregroundStyle(Theme.textSecondary)
                         }
                     }
-                    .pickerStyle(.menu)
-                    .tint(Theme.accent)
                 } header: {
                     Text(lm.s.languageLabel)
                         .font(.system(size: 12, weight: .semibold))
