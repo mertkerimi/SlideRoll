@@ -330,12 +330,11 @@ struct GlobalReviewView: View {
         withAnimation(.easeInOut(duration: 0.1)) { currentIndex = nextIndex }
         cardID = UUID()
         swipeCount += 1
-        // AD FREQUENCY — her kaç kaydırmada bir reklam gösterilsin (şu an: 100)
-        let adFrequency = 100
-        let shouldShowAd = swipeCount % adFrequency == 0 || nextIndex >= pendingIDs.count
-        if shouldShowAd {
+        // Offer an ad at a natural break — every 15 decisions or when the shuffle
+        // session is finished. AdManager enforces the launch grace + cooldown.
+        if swipeCount % 15 == 0 || nextIndex >= pendingIDs.count {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                adManager.showIfReady()
+                adManager.maybeShow()
             }
         }
     }
