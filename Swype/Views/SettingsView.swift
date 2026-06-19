@@ -65,6 +65,7 @@ struct SettingsView: View {
                 }
             }
             .scrollContentBackground(.hidden)
+            .contentMargins(.bottom, 96, for: .scrollContent)
         }
         .task { await notif.refreshStatus() }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
