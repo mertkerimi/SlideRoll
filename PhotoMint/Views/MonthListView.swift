@@ -85,7 +85,8 @@ struct MonthListView: View {
                 .blur(radius: 60)
                 .offset(x: 140, y: -100)
         }
-        .drawingGroup()
+        // No .drawingGroup() — it rasterizes to a bounding box and clips the
+        // soft blur into a hard rectangular edge.
         .allowsHitTesting(false)
     }
 
