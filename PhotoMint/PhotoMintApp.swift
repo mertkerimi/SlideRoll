@@ -4,7 +4,7 @@ import GoogleMobileAds
 import AppTrackingTransparency
 
 @main
-struct PhotoCleanerApp: App {
+struct PhotoMintApp: App {
     @State private var vm    = PhotoLibraryViewModel()
     @State private var lm    = LanguageManager()
     @State private var adMan = AdManager()
