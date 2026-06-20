@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls ~/Downloads/*.PNG 2>/dev/null | head -20; ls ~/Desktop/*.PNG 2>/dev/null | head -10; find ~/Downloads -name \"*.PNG\" -newer \"/Users/mertkerimi/Desktop/Yazılım 2/PhotoCleaner/README.md\" 2>/dev/null | head -10)",
+      "Bash(find ~/Library/Containers -name \"*.png\" -newer \"/Users/mertkerimi/Desktop/Yazılım 2/PhotoCleaner/README.md\" 2>/dev/null | head -10; find ~/Desktop -name \"*.png\" 2>/dev/null | head -10)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(gh pr *)",
+      "Bash(git checkout *)",
+      "Bash(git fetch *)"
+    ]
+  }
+}
