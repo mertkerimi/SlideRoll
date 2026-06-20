@@ -9,12 +9,9 @@ final class NotificationManager {
 
     var permissionStatus: UNAuthorizationStatus = .notDetermined
 
-    #if DEBUG
-    private static let debugCount = 3
-    #endif
-    // Number of weekly reminders scheduled ahead, and the local hour they fire at.
-    private static let weeklyCount = 8
-    private static let reminderHour = 11
+    // Last day-offset (from last app open) we schedule reminders for. Two
+    // notifications per active day → keep under iOS's 64 pending-request cap.
+    private static let lastDay = 30
 
     // MARK: - Permission
 
@@ -41,54 +38,46 @@ final class NotificationManager {
         guard enabled, permissionStatus == .authorized || permissionStatus == .provisional
         else { return }
 
-        let msgs = messages(language).shuffled()
+        let pool = messages(language).shuffled()
+        var msgIndex = 0
+        var notifIndex = 0
 
-        #if DEBUG
-        // Quick cadence so reminders can actually be tested in a session.
-        for i in 0..<Self.debugCount {
-            let msg = msgs[i % msgs.count]
-            schedule(id: "photomint.remind\(i)", delay: TimeInterval((i + 1) * 20),
-                     title: msg.0, body: msg.1)
+        func fire(dayOffset: Int, hour: Int, minute: Int) {
+            let msg = pool[msgIndex % pool.count]; msgIndex += 1
+            scheduleAt(id: "photomint.remind\(notifIndex)", dayOffset: dayOffset,
+                       hour: hour, minute: minute, title: msg.0, body: msg.1)
+            notifIndex += 1
         }
-        #else
-        // Weekly nudges at a pleasant local hour, with rotating copy. Rescheduled
-        // on every launch, so active users are never nagged — only lapsed ones.
-        for i in 0..<Self.weeklyCount {
-            let msg = msgs[i % msgs.count]
-            scheduleWeekly(id: "photomint.remind\(i)", weeksFromNow: i + 1,
-                           title: msg.0, body: msg.1)
+
+        // Days (from the last app open) a reminder fires: every 2 days for the
+        // first week, then daily — escalating for users who stop opening the app.
+        // Active users reset this on every launch, so they're never nagged.
+        var days = [2, 4, 6]
+        days += Array(7...Self.lastDay)
+
+        for day in days {
+            // Two per day: morning (09:00–11:59) and evening (19:00–23:59),
+            // at a random time within each window so it doesn't feel robotic.
+            fire(dayOffset: day, hour: Int.random(in: 9...11),  minute: Int.random(in: 0...59))
+            fire(dayOffset: day, hour: Int.random(in: 19...23), minute: Int.random(in: 0...59))
         }
-        #endif
     }
 
     func cancelAll() {
-        #if DEBUG
-        let ids = (0..<Self.debugCount).map { "photomint.remind\($0)" }
-        #else
-        let ids = (0..<Self.weeklyCount).map { "photomint.remind\($0)" }
-        #endif
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
+        // We are the only source of notifications, so clearing everything also
+        // sweeps away any stragglers from older builds.
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
     }
 
     // MARK: - Private
 
-    private func schedule(id: String, delay: TimeInterval, title: String, body: String) {
-        let content = UNMutableNotificationContent()
-        content.title = title
-        content.body  = body
-        content.sound = .default
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false)
-        let req = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
-        UNUserNotificationCenter.current().add(req)
-    }
-
-    /// Fires `weeksFromNow` weeks from now at the configured local hour.
-    private func scheduleWeekly(id: String, weeksFromNow: Int, title: String, body: String) {
+    /// Fires `dayOffset` days from now at the given local hour and minute.
+    private func scheduleAt(id: String, dayOffset: Int, hour: Int, minute: Int, title: String, body: String) {
         let cal = Calendar.current
-        guard let day = cal.date(byAdding: .day, value: weeksFromNow * 7, to: Date()) else { return }
+        guard let day = cal.date(byAdding: .day, value: dayOffset, to: Date()) else { return }
         var comps = cal.dateComponents([.year, .month, .day], from: day)
-        comps.hour = Self.reminderHour
-        comps.minute = 0
+        comps.hour = hour
+        comps.minute = minute
 
         let content = UNMutableNotificationContent()
         content.title = title
