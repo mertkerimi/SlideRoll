@@ -63,7 +63,7 @@ struct SplashView: View {
 
                 // App name + tagline
                 VStack(spacing: 10) {
-                    Text("Swype")
+                    Text("PhotoMint")
                         .font(.system(size: 36, weight: .bold, design: .rounded))
                         .foregroundStyle(Theme.textPrimary)
 

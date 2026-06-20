@@ -48,7 +48,7 @@ struct StatsView: View {
                         yearChartCard
                             .transition(.opacity.combined(with: .move(edge: .bottom)))
                     }
-                    swypeCard
+                    summaryCard
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
                 } else {
                     HStack(spacing: 8) {
@@ -223,9 +223,9 @@ struct StatsView: View {
         )
     }
 
-    // MARK: - Swype Card
+    // MARK: - PhotoMint Card
 
-    private var swypeCard: some View {
+    private var summaryCard: some View {
         let totalReviewed = vm.monthGroups.reduce(0) { $0 + $1.reviewed }
         let totalPhotos   = vm.monthGroups.reduce(0) { $0 + $1.total }
         let toDelete      = vm.toDeleteIDs.count
@@ -235,7 +235,7 @@ struct StatsView: View {
         return VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 8) {
                 Image(systemName: "photo.stack.fill").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.accentGradient)
-                Text("Swype " + lm.s.statProgress).font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.textPrimary)
+                Text("PhotoMint " + lm.s.statProgress).font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.textPrimary)
                 Spacer()
                 Text(String(format: "%0.f%%", progress * 100))
                     .font(.system(size: 13, weight: .bold, design: .rounded)).foregroundStyle(Theme.accent)
@@ -250,13 +250,13 @@ struct StatsView: View {
             }
             .frame(height: 6)
             HStack(spacing: 0) {
-                swypeStat(value: "\(totalReviewed)", label: lm.s.statReviewed, color: Theme.accent)
-                swypeDivider
-                swypeStat(value: "\(kept)", label: lm.s.statKept, color: Theme.green)
-                swypeDivider
-                swypeStat(value: "\(toDelete)", label: lm.s.statToDelete, color: Theme.orange)
-                swypeDivider
-                swypeStat(value: "\(vm.totalDeletedCount)", label: lm.s.statDeleted, color: Theme.red)
+                summaryStat(value: "\(totalReviewed)", label: lm.s.statReviewed, color: Theme.accent)
+                summaryDivider
+                summaryStat(value: "\(kept)", label: lm.s.statKept, color: Theme.green)
+                summaryDivider
+                summaryStat(value: "\(toDelete)", label: lm.s.statToDelete, color: Theme.orange)
+                summaryDivider
+                summaryStat(value: "\(vm.totalDeletedCount)", label: lm.s.statDeleted, color: Theme.red)
             }
         }
         .padding(20)
@@ -266,7 +266,7 @@ struct StatsView: View {
         )
     }
 
-    private func swypeStat(value: String, label: String, color: Color) -> some View {
+    private func summaryStat(value: String, label: String, color: Color) -> some View {
         VStack(spacing: 4) {
             Text(value).font(.system(size: 20, weight: .bold, design: .rounded)).foregroundStyle(color)
             Text(label).font(.system(size: 11, weight: .medium)).foregroundStyle(Theme.textTertiary)
@@ -274,7 +274,7 @@ struct StatsView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private var swypeDivider: some View { Rectangle().fill(Theme.border).frame(width: 1, height: 32) }
+    private var summaryDivider: some View { Rectangle().fill(Theme.border).frame(width: 1, height: 32) }
 
     // MARK: - Helpers
 

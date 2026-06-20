@@ -60,7 +60,7 @@ struct RootView: View {
         }
         .ignoresSafeArea(edges: .bottom)
         .onOpenURL { url in
-            guard url.scheme == "swype" else { return }
+            guard url.scheme == "photomint" else { return }
             withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) { selectedTab = .home }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                 if url.host == "year", let year = url.pathComponents.dropFirst().first {

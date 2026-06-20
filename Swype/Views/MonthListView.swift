@@ -130,7 +130,7 @@ struct MonthListView: View {
                 .frame(width: 36, height: 36)
                 .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
 
-            Text("Swype")
+            Text("PhotoMint")
                 .font(.system(size: 28, weight: .bold, design: .rounded))
                 .foregroundStyle(Theme.textPrimary)
 
