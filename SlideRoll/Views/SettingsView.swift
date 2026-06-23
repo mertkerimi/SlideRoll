@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(LanguageManager.self) var lm
     @Environment(NotificationManager.self) var notif
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         ZStack {
@@ -183,7 +184,9 @@ struct SettingsView: View {
         }
         .buttonStyle(.plain)
 
-        Link(destination: Self.supportURL) {
+        Button {
+            openURL(Self.supportURL)
+        } label: {
             aboutRow(icon: "envelope.fill", title: s.contactSupport, showChevron: true)
         }
         .buttonStyle(.plain)
