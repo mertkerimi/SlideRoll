@@ -3,7 +3,7 @@ import SwiftUI
 
 // MARK: - Shared Data
 
-private let shared = UserDefaults(suiteName: "group.com.mertkerimi.photomint")
+private let shared = UserDefaults(suiteName: "group.com.mertkerimi.slideroll")
 private let dailyGoal = 100
 
 struct YearStat: Identifiable {
@@ -14,7 +14,7 @@ struct YearStat: Identifiable {
     var progress: Double { total > 0 ? Double(reviewed) / Double(total) : 0 }
 }
 
-struct PhotoMintEntry: TimelineEntry {
+struct SlideRollEntry: TimelineEntry {
     let date: Date
     let pending: Int
     let total: Int
@@ -61,15 +61,15 @@ private extension ColorTheme {
 
 // MARK: - Provider
 
-struct PhotoMintProvider: TimelineProvider {
-    func placeholder(in context: Context) -> PhotoMintEntry { sampleEntry() }
-    func getSnapshot(in context: Context, completion: @escaping (PhotoMintEntry) -> Void) { completion(entry()) }
-    func getTimeline(in context: Context, completion: @escaping (Timeline<PhotoMintEntry>) -> Void) {
+struct SlideRollProvider: TimelineProvider {
+    func placeholder(in context: Context) -> SlideRollEntry { sampleEntry() }
+    func getSnapshot(in context: Context, completion: @escaping (SlideRollEntry) -> Void) { completion(entry()) }
+    func getTimeline(in context: Context, completion: @escaping (Timeline<SlideRollEntry>) -> Void) {
         let next = Calendar.current.date(byAdding: .minute, value: 30, to: .now) ?? .now
         completion(Timeline(entries: [entry()], policy: .after(next)))
     }
 
-    private func entry() -> PhotoMintEntry {
+    private func entry() -> SlideRollEntry {
         let pending   = shared?.integer(forKey: "widgetPendingCount")  ?? 0
         let total     = shared?.integer(forKey: "widgetTotalCount")    ?? 0
         let reviewed  = shared?.integer(forKey: "widgetReviewedCount") ?? 0
@@ -95,7 +95,7 @@ struct PhotoMintProvider: TimelineProvider {
         }
 
         let resolved = ColorTheme.resolve(theme)
-        return PhotoMintEntry(date: .now, pending: pending, total: total, reviewed: reviewed,
+        return SlideRollEntry(date: .now, pending: pending, total: total, reviewed: reviewed,
                           savingsBytes: savings, todayCount: today,
                           deletedCount: deleted, keptCount: kept,
                           years: years,
@@ -103,8 +103,8 @@ struct PhotoMintProvider: TimelineProvider {
                           lang: lang)
     }
 
-    private func sampleEntry() -> PhotoMintEntry {
-        PhotoMintEntry(date: .now, pending: 142, total: 800, reviewed: 658,
+    private func sampleEntry() -> SlideRollEntry {
+        SlideRollEntry(date: .now, pending: 142, total: 800, reviewed: 658,
                    savingsBytes: 1_200_000_000, todayCount: 47,
                    deletedCount: 312, keptCount: 346,
                    years: [YearStat(year: "2026", total: 300, reviewed: 120),
@@ -152,7 +152,7 @@ private func fmtNum(_ n: Int) -> String { n.formatted(.number) }
 // MARK: - Small Streak Widget View
 
 struct SmallStreakView: View {
-    let entry: PhotoMintEntry
+    let entry: SlideRollEntry
 
     private var levelBase: Int {
         guard entry.todayCount > 0 else { return 0 }
@@ -202,14 +202,14 @@ struct SmallStreakView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .widgetURL(URL(string: "photomint://shuffle")!)
+        .widgetURL(URL(string: "slideroll://shuffle")!)
     }
 }
 
 // MARK: - Small Storage Widget View
 
 struct SmallStorageView: View {
-    let entry: PhotoMintEntry
+    let entry: SlideRollEntry
 
     private var progress: Double {
         entry.total > 0 ? Double(entry.reviewed) / Double(entry.total) : 0
@@ -218,7 +218,7 @@ struct SmallStorageView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Header: shuffle linki
-            Link(destination: URL(string: "photomint://shuffle")!) {
+            Link(destination: URL(string: "slideroll://shuffle")!) {
                 HStack(spacing: 4) {
                     Image(systemName: "shuffle").font(.system(size: 11, weight: .bold)).foregroundStyle(entry.themeColor)
                     Text(entry.ws.continueBtn).font(.system(size: 11, weight: .semibold)).foregroundStyle(.primary).lineLimit(1)
@@ -278,7 +278,7 @@ struct SmallStorageView: View {
 // MARK: - Medium Widget View
 
 struct MediumView: View {
-    let entry: PhotoMintEntry
+    let entry: SlideRollEntry
 
     private var progress: Double {
         entry.total > 0 ? Double(entry.reviewed) / Double(entry.total) : 0
@@ -289,7 +289,7 @@ struct MediumView: View {
             // --- ÜST BÖLÜM ---
             VStack(alignment: .leading, spacing: 6) {
                 // Header
-                Link(destination: URL(string: "photomint://shuffle")!) {
+                Link(destination: URL(string: "slideroll://shuffle")!) {
                     HStack(spacing: 5) {
                         Image(systemName: "shuffle").font(.system(size: 10, weight: .bold)).foregroundStyle(entry.themeColor)
                         Text(entry.ws.continueBtn).font(.system(size: 10, weight: .semibold)).foregroundStyle(.primary)
@@ -372,7 +372,7 @@ struct MediumView: View {
 // MARK: - Large Widget View
 
 struct LargeView: View {
-    let entry: PhotoMintEntry
+    let entry: SlideRollEntry
 
     private var progress: Double {
         entry.total > 0 ? Double(entry.reviewed) / Double(entry.total) : 0
@@ -415,7 +415,7 @@ struct LargeView: View {
             Divider().opacity(0.3)
 
             // Shuffle header
-            Link(destination: URL(string: "photomint://shuffle")!) {
+            Link(destination: URL(string: "slideroll://shuffle")!) {
                 HStack(spacing: 5) {
                     Image(systemName: "shuffle").font(.system(size: 12, weight: .bold)).foregroundStyle(entry.themeColor)
                     Text(entry.ws.continueBtn).font(.system(size: 12, weight: .semibold)).foregroundStyle(.primary)
@@ -435,7 +435,7 @@ struct LargeView: View {
             Text(entry.ws.byYear).font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary).tracking(1)
 
             ForEach(entry.years.prefix(6)) { stat in
-                Link(destination: URL(string: "photomint://year/\(stat.year)")!) {
+                Link(destination: URL(string: "slideroll://year/\(stat.year)")!) {
                     HStack(spacing: 8) {
                         Text(stat.year)
                             .font(.system(size: 15, weight: .bold, design: .rounded))
@@ -488,7 +488,7 @@ struct LargeView: View {
 // MARK: - Lock Screen Views
 
 struct LockCircularView: View {
-    let entry: PhotoMintEntry
+    let entry: SlideRollEntry
     private var dailyProgress: Double { min(1.0, Double(entry.todayCount) / Double(dailyGoal)) }
 
     var body: some View {
@@ -504,7 +504,7 @@ struct LockCircularView: View {
 }
 
 struct LockInlineView: View {
-    let entry: PhotoMintEntry
+    let entry: SlideRollEntry
     var body: some View {
         Text("🔥 \(fmtNum(entry.todayCount))/\(dailyGoal) · \(fmtNum(entry.pending)) \(entry.ws.pending)")
     }
@@ -512,8 +512,8 @@ struct LockInlineView: View {
 
 // MARK: - Widget Entry View Router
 
-struct PhotoMintWidgetEntryView: View {
-    let entry: PhotoMintEntry
+struct SlideRollWidgetEntryView: View {
+    let entry: SlideRollEntry
     @Environment(\.widgetFamily) var family
 
     var body: some View {
@@ -530,33 +530,33 @@ struct PhotoMintWidgetEntryView: View {
 
 // MARK: - Streak Small Widget (separate kind)
 
-struct PhotoMintStreakEntryView: View {
-    let entry: PhotoMintEntry
+struct SlideRollStreakEntryView: View {
+    let entry: SlideRollEntry
     var body: some View { SmallStreakView(entry: entry) }
 }
 
 // MARK: - Widgets & Bundle
 
-struct PhotoMintMainWidget: Widget {
-    let kind = "PhotoMintMainWidget"
+struct SlideRollMainWidget: Widget {
+    let kind = "SlideRollMainWidget"
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: PhotoMintProvider()) { entry in
-            PhotoMintWidgetEntryView(entry: entry)
+        StaticConfiguration(kind: kind, provider: SlideRollProvider()) { entry in
+            SlideRollWidgetEntryView(entry: entry)
                 .containerBackground(for: .widget) {
                     widgetBackground(themeColor: entry.themeColor)
                 }
         }
-        .configurationDisplayName("PhotoMint")
+        .configurationDisplayName("SlideRoll")
         .description("Galeri durumu ve depolama özeti.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
 
-struct PhotoMintStreakWidget: Widget {
-    let kind = "PhotoMintStreakWidget"
+struct SlideRollStreakWidget: Widget {
+    let kind = "SlideRollStreakWidget"
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: PhotoMintProvider()) { entry in
-            PhotoMintStreakEntryView(entry: entry)
+        StaticConfiguration(kind: kind, provider: SlideRollProvider()) { entry in
+            SlideRollStreakEntryView(entry: entry)
                 .containerBackground(for: .widget) {
                     ZStack {
                         Color(red: 0.04, green: 0.03, blue: 0.06)
@@ -575,40 +575,40 @@ struct PhotoMintStreakWidget: Widget {
                     }
                 }
         }
-        .configurationDisplayName("PhotoMint — Günlük Hedef")
+        .configurationDisplayName("SlideRoll — Günlük Hedef")
         .description("Bugünkü inceleme hedefinizi takip edin.")
         .supportedFamilies([.systemSmall])
     }
 }
 
-struct PhotoMintLockWidget: Widget {
-    let kind = "PhotoMintLockWidget"
+struct SlideRollLockWidget: Widget {
+    let kind = "SlideRollLockWidget"
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: PhotoMintProvider()) { entry in
-            PhotoMintWidgetEntryView(entry: entry)
+        StaticConfiguration(kind: kind, provider: SlideRollProvider()) { entry in
+            SlideRollWidgetEntryView(entry: entry)
                 .containerBackground(.fill.tertiary, for: .widget)
         }
-        .configurationDisplayName("PhotoMint — Kilit Ekranı")
+        .configurationDisplayName("SlideRoll — Kilit Ekranı")
         .description("Günlük ilerlemenizi kilit ekranında görün.")
         .supportedFamilies([.accessoryCircular, .accessoryInline])
     }
 }
 
 @main
-struct PhotoMintWidgetBundle: WidgetBundle {
+struct SlideRollWidgetBundle: WidgetBundle {
     var body: some Widget {
-        PhotoMintMainWidget()
-        PhotoMintStreakWidget()
-        PhotoMintLockWidget()
+        SlideRollMainWidget()
+        SlideRollStreakWidget()
+        SlideRollLockWidget()
     }
 }
 
 // MARK: - Preview
 
 #Preview(as: .systemSmall) {
-    PhotoMintMainWidget()
+    SlideRollMainWidget()
 } timeline: {
-    PhotoMintEntry(date: .now, pending: 142, total: 800, reviewed: 658,
+    SlideRollEntry(date: .now, pending: 142, total: 800, reviewed: 658,
                savingsBytes: 1_200_000_000, todayCount: 47,
                deletedCount: 312, keptCount: 346,
                years: [], themeColor: ColorTheme.blue.accent,

@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "E0BE94182FD06C2F002A1CC6"
-               BuildableName = "PhotoMint.app"
-               BlueprintName = "PhotoMint"
-               ReferencedContainer = "container:PhotoMint.xcodeproj">
+               BuildableName = "SlideRoll.app"
+               BlueprintName = "SlideRoll"
+               ReferencedContainer = "container:SlideRoll.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -46,9 +46,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "E0BE94182FD06C2F002A1CC6"
-            BuildableName = "PhotoMint.app"
-            BlueprintName = "PhotoMint"
-            ReferencedContainer = "container:PhotoMint.xcodeproj">
+            BuildableName = "SlideRoll.app"
+            BlueprintName = "SlideRoll"
+            ReferencedContainer = "container:SlideRoll.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -63,9 +63,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "E0BE94182FD06C2F002A1CC6"
-            BuildableName = "PhotoMint.app"
-            BlueprintName = "PhotoMint"
-            ReferencedContainer = "container:PhotoMint.xcodeproj">
+            BuildableName = "SlideRoll.app"
+            BlueprintName = "SlideRoll"
+            ReferencedContainer = "container:SlideRoll.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

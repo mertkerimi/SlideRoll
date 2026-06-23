@@ -223,7 +223,7 @@ struct StatsView: View {
         )
     }
 
-    // MARK: - PhotoMint Card
+    // MARK: - SlideRoll Card
 
     private var summaryCard: some View {
         let totalReviewed = vm.monthGroups.reduce(0) { $0 + $1.reviewed }
@@ -235,7 +235,7 @@ struct StatsView: View {
         return VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 8) {
                 Image(systemName: "photo.stack.fill").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.accentGradient)
-                Text("PhotoMint " + lm.s.statProgress).font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.textPrimary)
+                Text("SlideRoll " + lm.s.statProgress).font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.textPrimary)
                 Spacer()
                 Text(String(format: "%0.f%%", progress * 100))
                     .font(.system(size: 13, weight: .bold, design: .rounded)).foregroundStyle(Theme.accent)
