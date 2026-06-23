@@ -38,7 +38,7 @@ struct PermissionView: View {
                 .padding(.bottom, 40)
 
                 VStack(spacing: 14) {
-                    Text("PhotoMint")
+                    Text("SlideRoll")
                         .font(.system(size: 34, weight: .bold, design: .rounded))
                         .foregroundStyle(Theme.textPrimary)
 

@@ -63,7 +63,7 @@ class PhotoLibraryViewModel {
     }
 
     // MARK: - Daily Stats
-    private static let sharedDefaults = UserDefaults(suiteName: "group.com.mertkerimi.photomint") ?? .standard
+    private static let sharedDefaults = UserDefaults(suiteName: "group.com.mertkerimi.slideroll") ?? .standard
     private static let dailyCountKey = "dailyDecisionCount"
     private static let dailyDateKey  = "dailyDecisionDate"
 

@@ -17,9 +17,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "E074B5B92FDB29BA00650DD6"
-               BuildableName = "PhotoMintWidgetExtension.appex"
-               BlueprintName = "PhotoMintWidgetExtension"
-               ReferencedContainer = "container:PhotoMint.xcodeproj">
+               BuildableName = "SlideRollWidgetExtension.appex"
+               BlueprintName = "SlideRollWidgetExtension"
+               ReferencedContainer = "container:SlideRoll.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry
@@ -31,9 +31,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "E0BE94182FD06C2F002A1CC6"
-               BuildableName = "PhotoMint.app"
-               BlueprintName = "PhotoMint"
-               ReferencedContainer = "container:PhotoMint.xcodeproj">
+               BuildableName = "SlideRoll.app"
+               BlueprintName = "SlideRoll"
+               ReferencedContainer = "container:SlideRoll.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -64,18 +64,18 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "E074B5B92FDB29BA00650DD6"
-            BuildableName = "PhotoMintWidgetExtension.appex"
-            BlueprintName = "PhotoMintWidgetExtension"
-            ReferencedContainer = "container:PhotoMint.xcodeproj">
+            BuildableName = "SlideRollWidgetExtension.appex"
+            BlueprintName = "SlideRollWidgetExtension"
+            ReferencedContainer = "container:SlideRoll.xcodeproj">
          </BuildableReference>
       </RemoteRunnable>
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "E0BE94182FD06C2F002A1CC6"
-            BuildableName = "PhotoMint.app"
-            BlueprintName = "PhotoMint"
-            ReferencedContainer = "container:PhotoMint.xcodeproj">
+            BuildableName = "SlideRoll.app"
+            BlueprintName = "SlideRoll"
+            ReferencedContainer = "container:SlideRoll.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <EnvironmentVariables>
@@ -96,7 +96,7 @@
          </EnvironmentVariable>
          <EnvironmentVariable
             key = "_XCWidgetKind"
-            value = "PhotoMintMainWidget"
+            value = "SlideRollMainWidget"
             isEnabled = "YES">
          </EnvironmentVariable>
       </EnvironmentVariables>
@@ -114,9 +114,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "E0BE94182FD06C2F002A1CC6"
-            BuildableName = "PhotoMint.app"
-            BlueprintName = "PhotoMint"
-            ReferencedContainer = "container:PhotoMint.xcodeproj">
+            BuildableName = "SlideRoll.app"
+            BlueprintName = "SlideRoll"
+            ReferencedContainer = "container:SlideRoll.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

@@ -9,7 +9,7 @@ final class LanguageManager {
     var selected: AppLanguage {
         didSet {
             UserDefaults.standard.set(selected.rawValue, forKey: Self.langKey)
-            UserDefaults(suiteName: "group.com.mertkerimi.photomint")?.set(selected.rawValue, forKey: "widgetLanguage")
+            UserDefaults(suiteName: "group.com.mertkerimi.slideroll")?.set(selected.rawValue, forKey: "widgetLanguage")
             WidgetCenter.shared.reloadAllTimelines()
         }
     }
@@ -17,7 +17,7 @@ final class LanguageManager {
     var selectedTheme: ColorTheme {
         didSet {
             UserDefaults.standard.set(selectedTheme.rawValue, forKey: Self.themeKey)
-            UserDefaults(suiteName: "group.com.mertkerimi.photomint")?.set(selectedTheme.rawValue, forKey: "widgetTheme")
+            UserDefaults(suiteName: "group.com.mertkerimi.slideroll")?.set(selectedTheme.rawValue, forKey: "widgetTheme")
             Theme.accent    = selectedTheme.accent
             Theme.accentEnd = selectedTheme.accentEnd
             themeVersion   += 1
@@ -30,7 +30,7 @@ final class LanguageManager {
 
     var s: Strings { Strings(language: selected) }
 
-    /// The device's preferred language if PhotoMint supports it, else English.
+    /// The device's preferred language if SlideRoll supports it, else English.
     private static func deviceLanguage() -> AppLanguage {
         for lang in Locale.preferredLanguages {
             let code = String(lang.prefix(2)).lowercased()
@@ -50,7 +50,7 @@ final class LanguageManager {
         // Apply persisted theme & language on launch
         Theme.accent    = selectedTheme.accent
         Theme.accentEnd = selectedTheme.accentEnd
-        let shared = UserDefaults(suiteName: "group.com.mertkerimi.photomint")
+        let shared = UserDefaults(suiteName: "group.com.mertkerimi.slideroll")
         shared?.set(selectedTheme.rawValue, forKey: "widgetTheme")
         shared?.set(selected.rawValue,      forKey: "widgetLanguage")
     }
