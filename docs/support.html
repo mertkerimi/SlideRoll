@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SlideRoll — Support / Destek</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.65; color: #1a1a1a; background: #fff;
+    max-width: 760px; margin: 0 auto; padding: 32px 20px 80px;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { color: #e8e8ea; background: #121219; }
+    a { color: #6ea8ff; }
+    .lang-btn { background: #1e1e28; color: #aaa; border-color: #2c2c38; }
+    .lang-btn.active { background: #6ea8ff; color: #0b0b12; border-color: #6ea8ff; }
+    h1, h2 { color: #fff; }
+    .meta { color: #888; }
+    .card { background: #1a1a22; border-color: #2c2c38; }
+  }
+  h1 { font-size: 26px; margin-bottom: 6px; }
+  h2 { font-size: 18px; margin: 28px 0 8px; }
+  p { margin-bottom: 12px; }
+  a { color: #2563eb; }
+  .meta { font-size: 13px; color: #666; margin-bottom: 24px; }
+  .langs { display: flex; gap: 8px; margin-bottom: 28px; flex-wrap: wrap; }
+  .lang-btn {
+    padding: 7px 16px; border-radius: 20px; font-size: 14px; font-weight: 600;
+    cursor: pointer; border: 1.5px solid #ddd; background: #f3f3f3; color: #555;
+  }
+  .lang-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  .doc { display: none; }
+  .doc.active { display: block; }
+  .card { border: 1px solid #eee; border-radius: 14px; padding: 18px 20px; margin: 14px 0; }
+  .email { font-size: 18px; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="langs">
+  <button class="lang-btn active" onclick="show('en', this)">🇬🇧 English</button>
+  <button class="lang-btn" onclick="show('tr', this)">🇹🇷 Türkçe</button>
+  <button class="lang-btn" onclick="show('de', this)">🇩🇪 Deutsch</button>
+</div>
+
+<!-- ENGLISH -->
+<div class="doc active" id="en">
+  <h1>SlideRoll Support</h1>
+  <p class="meta">We're here to help.</p>
+
+  <div class="card">
+    <p>Have a question, found a bug, or want to suggest a feature? Email us — we read every message.</p>
+    <p class="email"><a href="mailto:metomonto@gmail.com">metomonto@gmail.com</a></p>
+  </div>
+
+  <h2>Frequently Asked Questions</h2>
+
+  <h2 style="font-size:15px">Do my photos leave my device?</h2>
+  <p>No. SlideRoll processes everything on your device. Your photos and videos are never uploaded to any server.</p>
+
+  <h2 style="font-size:15px">How do I delete photos?</h2>
+  <p>Swipe left on a photo to mark it for deletion, then permanently delete from the Trash screen. Swipe right to keep, up to decide later.</p>
+
+  <h2 style="font-size:15px">Can I undo a deletion?</h2>
+  <p>Photos marked for deletion stay in the Trash until you confirm. Once permanently deleted, they go to your iOS "Recently Deleted" album for 30 days.</p>
+
+  <h2 style="font-size:15px">Why does SlideRoll need photo access?</h2>
+  <p>To let you review, organize, and delete your photos. Access stays on your device and can be revoked anytime in iOS Settings.</p>
+
+  <p style="margin-top:24px"><a href="/slideroll/privacy">Privacy Policy</a></p>
+</div>
+
+<!-- TÜRKÇE -->
+<div class="doc" id="tr">
+  <h1>SlideRoll Destek</h1>
+  <p class="meta">Yardımcı olmak için buradayız.</p>
+
+  <div class="card">
+    <p>Bir sorun mu var, hata mı buldun ya da öneri mi vermek istiyorsun? Bize yaz — her mesajı okuyoruz.</p>
+    <p class="email"><a href="mailto:metomonto@gmail.com">metomonto@gmail.com</a></p>
+  </div>
+
+  <h2>Sık Sorulan Sorular</h2>
+
+  <h2 style="font-size:15px">Fotoğraflarım cihazımdan çıkıyor mu?</h2>
+  <p>Hayır. SlideRoll her şeyi cihazında işler. Fotoğraf ve videoların hiçbir sunucuya yüklenmez.</p>
+
+  <h2 style="font-size:15px">Fotoğrafları nasıl silerim?</h2>
+  <p>Bir fotoğrafı sola kaydırarak silinecekler'e ekle, sonra Silinecekler ekranından kalıcı sil. Sağa kaydır = tut, yukarı = sonra.</p>
+
+  <h2 style="font-size:15px">Silmeyi geri alabilir miyim?</h2>
+  <p>Silinecek olarak işaretlenen fotoğraflar sen onaylayana kadar Silinecekler'de durur. Kalıcı silindikten sonra iOS'un "Son Silinenler" albümünde 30 gün kalır.</p>
+
+  <h2 style="font-size:15px">SlideRoll neden fotoğraf erişimi istiyor?</h2>
+  <p>Fotoğraflarını görüntüleyip düzenlemen ve silmen için. Erişim cihazında kalır ve iOS Ayarlar'dan istediğin zaman geri çekilebilir.</p>
+
+  <p style="margin-top:24px"><a href="/slideroll/privacy">Gizlilik Politikası</a></p>
+</div>
+
+<!-- DEUTSCH -->
+<div class="doc" id="de">
+  <h1>SlideRoll Support</h1>
+  <p class="meta">Wir sind für dich da.</p>
+
+  <div class="card">
+    <p>Hast du eine Frage, einen Fehler gefunden oder einen Vorschlag? Schreib uns — wir lesen jede Nachricht.</p>
+    <p class="email"><a href="mailto:metomonto@gmail.com">metomonto@gmail.com</a></p>
+  </div>
+
+  <h2>Häufige Fragen</h2>
+
+  <h2 style="font-size:15px">Verlassen meine Fotos mein Gerät?</h2>
+  <p>Nein. SlideRoll verarbeitet alles auf deinem Gerät. Deine Fotos und Videos werden niemals auf einen Server hochgeladen.</p>
+
+  <h2 style="font-size:15px">Wie lösche ich Fotos?</h2>
+  <p>Wische ein Foto nach links, um es zum Löschen zu markieren, und lösche es dann endgültig im Papierkorb. Nach rechts = behalten, nach oben = später.</p>
+
+  <h2 style="font-size:15px">Kann ich das Löschen rückgängig machen?</h2>
+  <p>Zum Löschen markierte Fotos bleiben im Papierkorb, bis du bestätigst. Nach dem endgültigen Löschen liegen sie 30 Tage im iOS-Album „Zuletzt gelöscht".</p>
+
+  <h2 style="font-size:15px">Warum benötigt SlideRoll Fotozugriff?</h2>
+  <p>Damit du deine Fotos ansehen, organisieren und löschen kannst. Der Zugriff bleibt auf deinem Gerät und kann jederzeit in den iOS-Einstellungen widerrufen werden.</p>
+
+  <p style="margin-top:24px"><a href="/slideroll/privacy">Datenschutzerklärung</a></p>
+</div>
+
+<script>
+function show(lang, btn) {
+  document.querySelectorAll('.doc').forEach(d => d.classList.remove('active'));
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(lang).classList.add('active');
+  btn.classList.add('active');
+  document.documentElement.lang = lang;
+}
+</script>
+</body>
+</html>

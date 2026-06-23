@@ -165,8 +165,8 @@ struct SettingsView: View {
 
     // MARK: - About / Legal Rows
 
-    private static let privacyPolicyURL = URL(string: "https://slideroll-legal.vercel.app/")!
-    private static let supportEmail = "metomonto@gmail.com"
+    private static let privacyPolicyURL = URL(string: "https://mrtkrm.com/slideroll/privacy")!
+    private static let supportURL = URL(string: "https://mrtkrm.com/slideroll/support")!
 
     private var appVersion: String {
         let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -183,12 +183,10 @@ struct SettingsView: View {
         }
         .buttonStyle(.plain)
 
-        if let mailURL = URL(string: "mailto:\(Self.supportEmail)") {
-            Link(destination: mailURL) {
-                aboutRow(icon: "envelope.fill", title: s.contactSupport, showChevron: true)
-            }
-            .buttonStyle(.plain)
+        Link(destination: Self.supportURL) {
+            aboutRow(icon: "envelope.fill", title: s.contactSupport, showChevron: true)
         }
+        .buttonStyle(.plain)
 
         HStack(spacing: 12) {
             Image(systemName: "info.circle.fill")
