@@ -30,6 +30,7 @@ struct SlideRollApp: App {
                 .environment(lm)
                 .environment(adMan)
                 .environment(notif)
+                .preferredColorScheme(lm.appearanceMode.colorScheme)
                 .task {
                     let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
                     if status == .authorized || status == .limited {

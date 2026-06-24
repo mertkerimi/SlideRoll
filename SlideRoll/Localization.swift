@@ -244,6 +244,12 @@ struct Strings {
         return fmt.string(from: date).capitalized(with: locale)
     }
 
+    // MARK: - Appearance
+    var appearanceSection: String  { L(["Appearance","Görünüm","Apariencia","Apparence","Aspetto","Aparência","Erscheinungsbild","外観","외관","外观","المظهر","Внешний вид"]) }
+    var appearanceSystem: String   { L(["System","Sistem","Sistema","Système","Sistema","Sistema","System","システム","시스템","跟随系统","النظام","Системное"]) }
+    var appearanceLight: String    { L(["Light","Açık","Claro","Clair","Chiaro","Claro","Hell","ライト","밝게","浅色","فاتح","Светлое"]) }
+    var appearanceDark: String     { L(["Dark","Koyu","Oscuro","Sombre","Scuro","Escuro","Dunkel","ダーク","어둡게","深色","داكن","Тёмное"]) }
+
     // MARK: - Notifications
     var notificationsSection: String { L(["Notifications","Bildirimler","Notificaciones","Notifications","Notifiche","Notificações","Benachrichtigungen","通知","알림","通知","الإشعارات","Уведомления"]) }
     var weeklyReminder: String       { L(["Weekly Reminder","Haftalık Hatırlatıcı","Recordatorio semanal","Rappel hebdomadaire","Promemoria settimanale","Lembrete semanal","Wöchentliche Erinnerung","毎週のリマインダー","주간 알림","每周提醒","تذكير أسبوعي","Еженедельное напоминание"]) }
