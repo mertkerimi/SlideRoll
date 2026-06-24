@@ -92,49 +92,68 @@ struct RootView: View {
 
     // MARK: - Floating Tab Bar
 
+    @Namespace private var tabNS
+
     private var floatingTabBar: some View {
         HStack(spacing: 0) {
             tabItem(icon: "photo.stack.fill", label: lm.s.tabHome, tab: .home)
             tabItem(icon: "chart.bar.fill",   label: lm.s.tabStats, tab: .stats)
             tabItem(icon: "gearshape.fill",   label: lm.s.tabSettings, tab: .settings)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .stroke(Theme.border, lineWidth: 1)
-                )
-                .shadow(color: .black.opacity(0.25), radius: 24, y: 8)
-        )
+        .padding(.horizontal, 8)
+        .padding(.vertical, 7)
+        .background {
+            ZStack {
+                RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [.white.opacity(0.18), .clear],
+                            startPoint: .top,
+                            endPoint: .center
+                        )
+                    )
+                RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [.white.opacity(0.35), .white.opacity(0.08)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        lineWidth: 1
+                    )
+            }
+            .shadow(color: .black.opacity(0.18), radius: 20, y: 8)
+            .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
+        }
         .tourAnchor(.tabBar)
-        .padding(.horizontal, 48)
+        .padding(.horizontal, 40)
     }
 
     private func tabItem(icon: String, label: String, tab: AppTab) -> some View {
         let isSelected = selectedTab == tab
         return Button {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+            withAnimation(.smooth(duration: 0.35)) {
                 selectedTab = tab
             }
         } label: {
-            VStack(spacing: 5) {
+            VStack(spacing: 4) {
                 ZStack {
                     if isSelected {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(Theme.accent.opacity(0.15))
-                            .frame(width: 44, height: 30)
-                            .transition(.scale.combined(with: .opacity))
+                        Capsule(style: .continuous)
+                            .fill(Theme.accent)
+                            .frame(width: 52, height: 32)
+                            .matchedGeometryEffect(id: "tabPill", in: tabNS)
+                            .shadow(color: Theme.accent.opacity(0.45), radius: 10, y: 4)
                     }
                     Image(systemName: icon)
-                        .font(.system(size: 18, weight: isSelected ? .bold : .regular))
-                        .foregroundStyle(isSelected ? Theme.accent : Theme.textTertiary)
-                        .scaleEffect(isSelected ? 1.1 : 1.0)
-                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+                        .font(.system(size: 17, weight: isSelected ? .semibold : .regular))
+                        .foregroundStyle(isSelected ? .white : Theme.textTertiary)
+                        .scaleEffect(isSelected ? 1.05 : 1.0)
+                        .animation(.smooth(duration: 0.3), value: isSelected)
                 }
-                .frame(width: 44, height: 30)
+                .frame(width: 52, height: 32)
 
                 Text(label)
                     .font(.system(size: 10, weight: isSelected ? .semibold : .regular))
