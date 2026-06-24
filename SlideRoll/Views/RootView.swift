@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum AppTab {
-    case home, stats, settings
+    case home, albums, stats, settings
 }
 
 struct RootView: View {
@@ -26,6 +26,18 @@ struct RootView: View {
                                 }
                             }
                         }
+                case .albums:
+                    NavigationStack {
+                        AlbumsView()
+                            .navigationBarTitleDisplayMode(.inline)
+                            .toolbar {
+                                ToolbarItem(placement: .principal) {
+                                    Text(lm.s.tabAlbums)
+                                        .font(.system(size: 16, weight: .bold))
+                                        .foregroundStyle(Theme.textPrimary)
+                                }
+                            }
+                    }
                 case .stats:
                     NavigationStack {
                         StatsView()
@@ -96,9 +108,10 @@ struct RootView: View {
 
     private var floatingTabBar: some View {
         HStack(spacing: 0) {
-            tabItem(icon: "photo.stack.fill", label: lm.s.tabHome, tab: .home)
-            tabItem(icon: "chart.bar.fill",   label: lm.s.tabStats, tab: .stats)
-            tabItem(icon: "gearshape.fill",   label: lm.s.tabSettings, tab: .settings)
+            tabItem(icon: "photo.stack.fill",  label: lm.s.tabHome,     tab: .home)
+            tabItem(icon: "rectangle.stack.fill", label: lm.s.tabAlbums, tab: .albums)
+            tabItem(icon: "chart.bar.fill",    label: lm.s.tabStats,    tab: .stats)
+            tabItem(icon: "gearshape.fill",    label: lm.s.tabSettings, tab: .settings)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 7)

@@ -207,6 +207,7 @@ struct Strings {
 
     // MARK: - Tab bar
     var tabHome: String     { L(["Home","Ana Sayfa","Inicio","Accueil","Home","Início","Startseite","ホーム","홈","主页","الرئيسية","Главная"]) }
+    var tabAlbums: String   { L(["Albums","Albümler","Álbumes","Albums","Album","Álbuns","Alben","アルバム","앨범","相册","الألبومات","Альбомы"]) }
     var tabStats: String    { L(["Library","Kütüphane","Biblioteca","Bibliothèque","Libreria","Biblioteca","Mediathek","ライブラリ","라이브러리","图库","المكتبة","Библиотека"]) }
     var tabSettings: String { L(["Settings","Ayarlar","Ajustes","Réglages","Impostazioni","Ajustes","Einstellungen","設定","설정","设置","الإعدادات","Настройки"]) }
 
