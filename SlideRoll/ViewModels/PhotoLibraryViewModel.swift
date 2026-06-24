@@ -495,12 +495,20 @@ class PhotoLibraryViewModel {
         guard let asset = allAssets[id] else { return nil }
         return await withCheckedContinuation { continuation in
             let options = PHImageRequestOptions()
-            options.deliveryMode = .fastFormat
+            options.deliveryMode = .opportunistic
             options.resizeMode = .fast
+            options.isNetworkAccessAllowed = true
             options.isSynchronous = false
             var resumed = false
             imageManager.requestImage(for: asset, targetSize: CGSize(width: 300, height: 400),
-                                      contentMode: .aspectFill, options: options) { image, _ in
+                                      contentMode: .aspectFill, options: options) { image, info in
+                let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+                if isDegraded && image != nil {
+                    guard !resumed else { return }
+                    resumed = true
+                    continuation.resume(returning: image)
+                    return
+                }
                 guard !resumed else { return }
                 resumed = true
                 continuation.resume(returning: image)
