@@ -313,6 +313,8 @@ struct SettingsView: View {
 
     // MARK: - Appearance Picker
 
+    @Namespace private var appearanceNS
+
     private var appearancePicker: some View {
         let s = lm.s
         let modes: [(AppearanceMode, String, String)] = [
@@ -323,42 +325,49 @@ struct SettingsView: View {
         return HStack(spacing: 0) {
             ForEach(Array(modes.enumerated()), id: \.1.0) { index, item in
                 let (mode, icon, label) = item
+                let selected = lm.appearanceMode == mode
                 Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                    withAnimation(.smooth(duration: 0.4)) {
                         lm.appearanceMode = mode
                     }
                 } label: {
-                    let selected = lm.appearanceMode == mode
-                    let big: CGFloat = 12
-                    let small: CGFloat = 7
-                    let isFirst = index == 0
-                    let isLast  = index == modes.count - 1
-                    let tl: CGFloat = isFirst ? big : small
-                    let bl: CGFloat = isFirst ? big : small
-                    let tr: CGFloat = isLast  ? big : small
-                    let br: CGFloat = isLast  ? big : small
-                    VStack(spacing: 4) {
-                        Image(systemName: icon)
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(selected ? .white : Theme.textSecondary)
-                        Text(label)
-                            .font(.system(size: 11, weight: selected ? .semibold : .regular))
-                            .foregroundStyle(selected ? .white : Theme.textSecondary)
+                    ZStack {
+                        if selected {
+                            let big: CGFloat = 10
+                            let small: CGFloat = 4
+                            let isFirst = index == 0
+                            let isLast  = index == modes.count - 1
+                            UnevenRoundedRectangle(
+                                topLeadingRadius:     isFirst ? big : small,
+                                bottomLeadingRadius:  isFirst ? big : small,
+                                bottomTrailingRadius: isLast  ? big : small,
+                                topTrailingRadius:    isLast  ? big : small,
+                                style: .continuous
+                            )
+                            .fill(Theme.accent)
+                            .padding(.leading, isFirst ? -4 : 0)
+                            .padding(.trailing, isLast ? -4 : 0)
+                            .padding(.vertical, -4)
+                            .matchedGeometryEffect(id: "pill", in: appearanceNS)
+                            .shadow(color: Theme.accent.opacity(0.4), radius: 8, y: 3)
+                        }
+                        VStack(spacing: 4) {
+                            Image(systemName: icon)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(selected ? .white : Theme.textSecondary)
+                            Text(label)
+                                .font(.system(size: 11, weight: selected ? .semibold : .regular))
+                                .foregroundStyle(selected ? .white : Theme.textSecondary)
+                        }
+                        .padding(.vertical, 12)
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(
-                        UnevenRoundedRectangle(
-                            topLeadingRadius: tl, bottomLeadingRadius: bl,
-                            bottomTrailingRadius: br, topTrailingRadius: tr,
-                            style: .continuous
-                        )
-                        .fill(selected ? Theme.accent : Color.clear)
-                    )
                 }
                 .buttonStyle(.plain)
             }
         }
+        .padding(4)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     // MARK: - Color Palette

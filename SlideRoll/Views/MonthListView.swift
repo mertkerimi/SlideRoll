@@ -112,7 +112,7 @@ struct MonthListView: View {
                             withAnimation { selectedTab = .settings }
                         } label: {
                             HStack(spacing: 5) {
-                                Image(systemName: "photo.badge.lock")
+                                Image(systemName: "lock.rectangle")
                                     .font(.system(size: 12, weight: .medium))
                                 Text("Fotoğraf Erişimini Değiştir →")
                                     .font(.system(size: 13, weight: .medium))
