@@ -1,8 +1,10 @@
 import SwiftUI
+import Photos
 
 // MARK: - Root Hub
 
 struct MonthListView: View {
+    @Binding var selectedTab: AppTab
     @Environment(PhotoLibraryViewModel.self) var vm
     @Environment(LanguageManager.self) var lm
     @Environment(AdManager.self) var adManager
@@ -102,7 +104,27 @@ struct MonthListView: View {
 
                 summaryHeader
                     .padding(.horizontal, 24)
-                    .padding(.bottom, 24)
+                    .padding(.bottom, vm.authStatus == .limited ? 8 : 24)
+
+                if vm.authStatus == .limited {
+                    HStack {
+                        Button {
+                            withAnimation { selectedTab = .settings }
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: "photo.badge.lock")
+                                    .font(.system(size: 12, weight: .medium))
+                                Text("Fotoğraf Erişimini Değiştir →")
+                                    .font(.system(size: 13, weight: .medium))
+                            }
+                            .foregroundStyle(Theme.accent)
+                        }
+                        .buttonStyle(.plain)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 20)
+                }
 
                 LazyVStack(spacing: 14) {
                     ForEach(Array(vm.yearGroups.enumerated()), id: \.element.id) { index, year in
@@ -456,6 +478,7 @@ struct YearCard: View {
     }
 
 }
+
 
 // MARK: - Months for Year
 

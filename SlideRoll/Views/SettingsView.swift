@@ -1,8 +1,11 @@
 import SwiftUI
+import Photos
+import PhotosUI
 
 struct SettingsView: View {
     @Environment(LanguageManager.self) var lm
     @Environment(NotificationManager.self) var notif
+    @Environment(PhotoLibraryViewModel.self) var vm
     @Environment(\.openURL) private var openURL
 
     var body: some View {
@@ -55,6 +58,24 @@ struct SettingsView: View {
                         .foregroundStyle(Theme.textSecondary)
                         .textCase(nil)
                 }
+
+                // MARK: Limited Access
+                if vm.authStatus == .limited {
+                    Section {
+                        limitedAddMoreRow
+                        limitedFullAccessRow
+                    } header: {
+                        Text(lm.s.limitedAccessTitle)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Theme.textSecondary)
+                            .textCase(nil)
+                    } footer: {
+                        Text(lm.s.limitedAccessSub)
+                            .font(.system(size: 12))
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                }
+
                 // MARK: Notifications
                 Section {
                     notificationRows
@@ -173,6 +194,60 @@ struct SettingsView: View {
             .tint(Theme.accent)
 
         }
+    }
+
+    // MARK: - Limited Access Rows
+
+    @State private var limitedHostVC: UIViewController?
+
+    private var limitedAddMoreRow: some View {
+        Button {
+            guard let vc = limitedHostVC else { return }
+            PHPhotoLibrary.shared().presentLimitedLibraryPicker(from: vc) { _ in
+                Task { await vm.loadPhotos() }
+            }
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "photo.badge.plus")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Theme.accent).frame(width: 28)
+                Text(lm.s.limitedAddMore)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(Theme.textPrimary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Theme.textTertiary)
+            }
+            .padding(.vertical, 3)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .background { ViewControllerFinder { limitedHostVC = $0 } }
+    }
+
+    private var limitedFullAccessRow: some View {
+        Button {
+            if let url = URL(string: UIApplication.openSettingsURLString) {
+                UIApplication.shared.open(url)
+            }
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "lock.open.fill")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Theme.accent).frame(width: 28)
+                Text(lm.s.limitedFullAccess)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(Theme.textPrimary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Theme.textTertiary)
+            }
+            .padding(.vertical, 3)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - About / Legal Rows
