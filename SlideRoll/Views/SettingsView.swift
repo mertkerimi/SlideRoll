@@ -7,7 +7,7 @@ struct SettingsView: View {
 
     var body: some View {
         ZStack {
-            Theme.bg.ignoresSafeArea()
+            Color(UIColor.systemGroupedBackground).ignoresSafeArea()
 
             List {
                 // MARK: Color Theme
@@ -15,6 +15,17 @@ struct SettingsView: View {
                     colorPalette
                 } header: {
                     Text(lm.s.themeColor)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Theme.textSecondary)
+                        .textCase(nil)
+                }
+
+                // MARK: Appearance
+                Section {
+                    appearancePicker
+                        .listRowInsets(EdgeInsets())
+                } header: {
+                    Text(lm.s.appearanceSection)
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Theme.textSecondary)
                         .textCase(nil)
@@ -223,6 +234,56 @@ struct SettingsView: View {
         }
         .padding(.vertical, 3)
         .contentShape(Rectangle())
+    }
+
+    // MARK: - Appearance Picker
+
+    private var appearancePicker: some View {
+        let s = lm.s
+        let modes: [(AppearanceMode, String, String)] = [
+            (.system, "circle.lefthalf.filled", s.appearanceSystem),
+            (.light,  "sun.max.fill",            s.appearanceLight),
+            (.dark,   "moon.fill",               s.appearanceDark),
+        ]
+        return HStack(spacing: 0) {
+            ForEach(Array(modes.enumerated()), id: \.1.0) { index, item in
+                let (mode, icon, label) = item
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                        lm.appearanceMode = mode
+                    }
+                } label: {
+                    let selected = lm.appearanceMode == mode
+                    let big: CGFloat = 12
+                    let small: CGFloat = 7
+                    let isFirst = index == 0
+                    let isLast  = index == modes.count - 1
+                    let tl: CGFloat = isFirst ? big : small
+                    let bl: CGFloat = isFirst ? big : small
+                    let tr: CGFloat = isLast  ? big : small
+                    let br: CGFloat = isLast  ? big : small
+                    VStack(spacing: 4) {
+                        Image(systemName: icon)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(selected ? .white : Theme.textSecondary)
+                        Text(label)
+                            .font(.system(size: 11, weight: selected ? .semibold : .regular))
+                            .foregroundStyle(selected ? .white : Theme.textSecondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(
+                        UnevenRoundedRectangle(
+                            topLeadingRadius: tl, bottomLeadingRadius: bl,
+                            bottomTrailingRadius: br, topTrailingRadius: tr,
+                            style: .continuous
+                        )
+                        .fill(selected ? Theme.accent : Color.clear)
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
     }
 
     // MARK: - Color Palette

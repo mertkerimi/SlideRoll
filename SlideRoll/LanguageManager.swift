@@ -1,10 +1,23 @@
 import SwiftUI
 import WidgetKit
 
+enum AppearanceMode: String, CaseIterable {
+    case system, light, dark
+
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: return nil
+        case .light:  return .light
+        case .dark:   return .dark
+        }
+    }
+}
+
 @Observable
 final class LanguageManager {
-    private static let langKey   = "selectedLanguage"
-    private static let themeKey  = "selectedColorTheme"
+    private static let langKey       = "selectedLanguage"
+    private static let themeKey      = "selectedColorTheme"
+    private static let appearanceKey = "selectedAppearanceMode"
 
     var selected: AppLanguage {
         didSet {
@@ -25,6 +38,10 @@ final class LanguageManager {
         }
     }
 
+    var appearanceMode: AppearanceMode {
+        didSet { UserDefaults.standard.set(appearanceMode.rawValue, forKey: Self.appearanceKey) }
+    }
+
     // Incrementing this causes RootView to re-render the full tree
     var themeVersion: Int = 0
 
@@ -40,12 +57,14 @@ final class LanguageManager {
     }
 
     init() {
-        let savedLang  = UserDefaults.standard.string(forKey: Self.langKey) ?? ""
-        let savedTheme = UserDefaults.standard.string(forKey: Self.themeKey) ?? ""
+        let savedLang       = UserDefaults.standard.string(forKey: Self.langKey) ?? ""
+        let savedTheme      = UserDefaults.standard.string(forKey: Self.themeKey) ?? ""
+        let savedAppearance = UserDefaults.standard.string(forKey: Self.appearanceKey) ?? ""
         // On first launch (no saved language) match the device language if we
         // support it, otherwise fall back to English.
-        selected      = AppLanguage(rawValue: savedLang) ?? Self.deviceLanguage()
-        selectedTheme = ColorTheme(rawValue: savedTheme)  ?? .blue
+        selected       = AppLanguage(rawValue: savedLang)          ?? Self.deviceLanguage()
+        selectedTheme  = ColorTheme(rawValue: savedTheme)          ?? .blue
+        appearanceMode = AppearanceMode(rawValue: savedAppearance) ?? .system
 
         // Apply persisted theme & language on launch
         Theme.accent    = selectedTheme.accent
