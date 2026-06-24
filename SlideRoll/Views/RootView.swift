@@ -18,7 +18,7 @@ struct RootView: View {
             Group {
                 switch selectedTab {
                 case .home:
-                    MonthListView()
+                    MonthListView(selectedTab: $selectedTab)
                         .onAppear {
                             if !hasSeenAppTour {
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
@@ -40,7 +40,7 @@ struct RootView: View {
                     }
                 case .settings:
                     NavigationStack {
-                        SettingsView().environment(notif)
+                        SettingsView().environment(notif).environment(vm)
                             .navigationBarTitleDisplayMode(.inline)
                             .toolbar {
                                 ToolbarItem(placement: .principal) {
