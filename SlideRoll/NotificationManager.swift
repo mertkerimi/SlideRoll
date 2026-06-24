@@ -49,11 +49,7 @@ final class NotificationManager {
             notifIndex += 1
         }
 
-        // Days (from the last app open) a reminder fires: every 2 days for the
-        // first week, then daily — escalating for users who stop opening the app.
-        // Active users reset this on every launch, so they're never nagged.
-        var days = [2, 4, 6]
-        days += Array(7...Self.lastDay)
+        let days = Array(1...Self.lastDay)
 
         for day in days {
             // Two per day: morning (09:00–11:59) and evening (19:00–23:59),
