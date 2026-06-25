@@ -292,6 +292,31 @@ struct Strings {
 
     var videoLoadError: String { L(["Video could not be loaded","Video yüklenemedi","No se pudo cargar el video","Impossible de charger la vidéo","Impossibile caricare il video","Não foi possível carregar o vídeo","Video konnte nicht geladen werden","動画を読み込めませんでした","동영상을 불러올 수 없습니다","无法加载视频","تعذّر تحميل الفيديو","Не удалось загрузить видео"]) }
 
+    // MARK: - Albums
+    var albumsEmptyTitle: String    { L(["Add Album","Albüm Ekle","Añadir álbum","Ajouter un album","Aggiungi album","Adicionar álbum","Album hinzufügen","アルバムを追加","앨범 추가","添加相册","إضافة ألبوم","Добавить альбом"]) }
+    var albumsEmptyDesc: String     { L(["Select albums you want to follow\nto build your personal gallery.","Takip etmek istediğin albümleri seçerek\nkendi galerinizi oluşturun.","Selecciona los álbumes a seguir\npara crear tu galería personal.","Sélectionnez les albums à suivre\npour créer votre galerie.","Seleziona gli album da seguire\nper creare la tua galleria.","Selecione os álbuns que deseja seguir\npara criar sua galeria pessoal.","Wähle Alben aus, die du verfolgen möchtest,\num deine Galerie zu erstellen.","フォローするアルバムを選んで\nマイギャラリーを作りましょう。","팔로우할 앨범을 선택하여\n나만의 갤러리를 만드세요.","选择要关注的相册\n以建立您的个人画廊。","اختر الألبومات التي تريد متابعتها\nلبناء معرضك الشخصي.","Выберите альбомы для создания\nвашей личной галереи."]) }
+    var albumsAddButton: String     { L(["Select Album","Albüm Seç","Seleccionar álbum","Sélectionner un album","Seleziona album","Selecionar álbum","Album auswählen","アルバムを選択","앨범 선택","选择相册","اختر ألبومًا","Выбрать альбом"]) }
+    var albumsLoading: String       { L(["Loading albums…","Albümler yükleniyor…","Cargando álbumes…","Chargement des albums…","Caricamento album…","Carregando álbuns…","Alben werden geladen…","アルバム読み込み中…","앨범 불러오는 중…","正在加载相册…","جارٍ تحميل الألبومات…","Загрузка альбомов…"]) }
+    var albumsClear: String         { L(["Clear","Temizle","Borrar","Effacer","Cancella","Limpar","Löschen","クリア","초기화","清除","مسح","Очистить"]) }
+    func albumsSelectedCount(_ n: Int) -> String { L(["\(n) album\(n == 1 ? "" : "s") selected","\(n) albüm seçili","\(n) álbum\(n == 1 ? "" : "es") seleccionado\(n == 1 ? "" : "s")","\(n) album\(n > 1 ? "s" : "") sélectionné\(n > 1 ? "s" : "")","\(n) album\(n == 1 ? "" : "i") selezionat\(n == 1 ? "o" : "i")","\(n) álbum\(n == 1 ? "" : "ns") selecionado\(n == 1 ? "" : "s")","\(n) Album\(n == 1 ? "" : "s") ausgewählt","\(n)件のアルバムを選択","앨범 \(n)개 선택됨","已选择 \(n) 个相册","تم تحديد \(n) ألبوم","Выбрано \(n) альбомов"]) }
+    var albumsSectionSmart: String  { L(["System Albums","Sistem Albümleri","Álbumes del sistema","Albums système","Album di sistema","Álbuns do sistema","Systemalben","システムアルバム","시스템 앨범","系统相册","ألبومات النظام","Системные альбомы"]) }
+    var albumsSectionShared: String { L(["Shared Albums","Paylaşılan Albümler","Álbumes compartidos","Albums partagés","Album condivisi","Álbuns compartilhados","Geteilte Alben","共有アルバム","공유 앨범","共享相册","الألبومات المشتركة","Общие альбомы"]) }
+    var albumsSectionUser: String   { L(["My Albums","Albümlerim","Mis álbumes","Mes albums","I miei album","Meus álbuns","Meine Alben","マイアルバム","나의 앨범","我的相册","ألبوماتي","Мои альбомы"]) }
+
+    // Smart album names (cihaz dilinden bağımsız tutarlı çeviriler)
+    var smartSelfies: String       { L(["Selfies","Selfie'ler","Selfis","Selfies","Selfie","Selfies","Selfies","自撮り","셀카","自拍","سيلفي","Селфи"]) }
+    var smartScreenshots: String   { L(["Screenshots","Ekran Görüntüleri","Capturas","Captures d'écran","Screenshot","Capturas de ecrã","Bildschirmfotos","スクリーンショット","스크린샷","截图","لقطات شاشة","Снимки экрана"]) }
+    var smartFavorites: String     { L(["Favorites","Favoriler","Favoritos","Favoris","Preferiti","Favoritos","Favoriten","お気に入り","즐겨찾기","收藏","المفضلة","Избранное"]) }
+    var smartVideos: String        { L(["Videos","Videolar","Videos","Vidéos","Video","Vídeos","Videos","動画","동영상","视频","الفيديوهات","Видео"]) }
+    var smartBursts: String        { L(["Duplicates","Yinelenenler","Duplicados","Doublons","Duplicati","Duplicados","Duplikate","重複","중복","重复项","مكررة","Дубликаты"]) }
+    var smartPanoramas: String     { L(["Panoramas","Panoramalar","Panoramas","Panoramas","Panorami","Panoramas","Panoramas","パノラマ","파노라마","全景","بانوراما","Панорамы"]) }
+    var smartSlowMotion: String    { L(["Slow Motion","Ağır Çekim","Cámara lenta","Ralenti","Slow motion","Câmera lenta","Zeitlupe","スロー","슬로모션","慢动作","الحركة البطيئة","Замедленная съёмка"]) }
+    var smartTimelapse: String     { L(["Time-lapse","Zaman Atlamalı","Time-lapse","Time-lapse","Time-lapse","Time-lapse","Zeitraffer","タイムラプス","타임랩스","延时","الفاصل الزمني","Таймلапس"]) }
+    var smartAnimated: String      { L(["Animated","Animasyonlar","Animadas","Animés","Animate","Animados","Animiert","アニメーション","애니메이션","动态图","متحركة","Анимированные"]) }
+    var smartLivePhotos: String    { L(["Live Photos","Live Photo'lar","Live Photos","Live Photos","Live Photo","Live Photos","Live Photos","Live Photos","Live Photos","实况照片","Live Photos","Live Photos"]) }
+    var smartPortrait: String      { L(["Portrait","Portre","Retrato","Portrait","Ritratto","Retrato","Porträt","ポートレート","인물 사진","人像","بورتريه","Портрет"]) }
+    var smartRecentlyAdded: String { L(["Recently Added","Son Eklenenler","Añadidos recientemente","Récemment ajoutés","Aggiunti di recente","Adicionados recentemente","Zuletzt hinzugefügt","最近追加","최근 추가","最近添加","المضافة مؤخرًا","Недавно добавленные"]) }
+
     // MARK: - About / Legal
     var aboutSection: String   { L(["About","Hakkında","Acerca de","À propos","Informazioni","Sobre","Über","アプリについて","정보","关于","حول","О приложении"]) }
     var privacyPolicy: String  { L(["Privacy Policy","Gizlilik Politikası","Política de privacidad","Politique de confidentialité","Informativa sulla privacy","Política de privacidade","Datenschutzerklärung","プライバシーポリシー","개인정보 처리방침","隐私政策","سياسة الخصوصية","Политика конфиденциальности"]) }

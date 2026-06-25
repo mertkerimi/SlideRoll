@@ -38,9 +38,13 @@ struct SettingsView: View {
                                 icon: "globe", iconColor: Theme.accent,
                                 title: lm.s.languageLabel,
                                 trailing: AnyView(
-                                    Text(lm.selected.displayName)
-                                        .font(.system(size: 14))
-                                        .foregroundStyle(Theme.textSecondary)
+                                    HStack(spacing: 6) {
+                                        Text(lm.selected.flag)
+                                            .font(.system(size: 16))
+                                        Text(lm.selected.displayName)
+                                            .font(.system(size: 14))
+                                            .foregroundStyle(Theme.textSecondary)
+                                    }
                                 )
                             )
                         }
