@@ -8,101 +8,188 @@ struct SettingsView: View {
     @Environment(PhotoLibraryViewModel.self) var vm
     @Environment(\.openURL) private var openURL
 
+    @State private var appeared = false
+
     var body: some View {
         ZStack {
-            Color(UIColor.systemGroupedBackground).ignoresSafeArea()
+            Theme.bg.ignoresSafeArea()
+            backgroundGlows
 
-            List {
-                // MARK: Color Theme
-                Section {
-                    colorPalette
-                } header: {
-                    Text(lm.s.themeColor)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Theme.textSecondary)
-                        .textCase(nil)
-                }
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 20) {
+                    appHeaderCard
+                        .cardEntrance(appeared: appeared, delay: 0.0)
 
-                // MARK: Appearance
-                Section {
-                    appearancePicker
-                        .listRowInsets(EdgeInsets())
-                } header: {
-                    Text(lm.s.appearanceSection)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Theme.textSecondary)
-                        .textCase(nil)
-                }
+                    sectionCard(header: lm.s.themeColor) {
+                        colorPalette
+                    }
+                    .cardEntrance(appeared: appeared, delay: 0.07)
 
-                // MARK: Language
-                Section {
-                    NavigationLink {
-                        LanguageSelectionView().environment(lm)
-                    } label: {
-                        HStack(spacing: 12) {
-                            Image(systemName: "globe")
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundStyle(Theme.accent)
-                            Text(lm.s.languageLabel)
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundStyle(Theme.textPrimary)
-                            Spacer()
-                            Text(lm.selected.displayName)
-                                .font(.system(size: 14))
-                                .foregroundStyle(Theme.textSecondary)
+                    sectionCard(header: lm.s.appearanceSection) {
+                        appearancePicker
+                    }
+                    .cardEntrance(appeared: appeared, delay: 0.14)
+
+                    sectionCard(header: lm.s.languageLabel) {
+                        NavigationLink {
+                            LanguageSelectionView().environment(lm)
+                        } label: {
+                            settingsRow(
+                                icon: "globe", iconColor: Theme.accent,
+                                title: lm.s.languageLabel,
+                                trailing: AnyView(
+                                    Text(lm.selected.displayName)
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(Theme.textSecondary)
+                                )
+                            )
                         }
+                        .buttonStyle(.plain)
                     }
-                } header: {
-                    Text(lm.s.languageLabel)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Theme.textSecondary)
-                        .textCase(nil)
-                }
+                    .cardEntrance(appeared: appeared, delay: 0.21)
 
-                // MARK: Limited Access
-                if vm.authStatus == .limited {
-                    Section {
-                        limitedAddMoreRow
-                        limitedFullAccessRow
-                    } header: {
-                        Text(lm.s.limitedAccessTitle)
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(Theme.textSecondary)
-                            .textCase(nil)
-                    } footer: {
-                        Text(lm.s.limitedAccessSub)
-                            .font(.system(size: 12))
-                            .foregroundStyle(Theme.textSecondary)
+                    if vm.authStatus == .limited {
+                        sectionCard(header: lm.s.limitedAccessTitle, footer: lm.s.limitedAccessSub) {
+                            limitedAddMoreRow
+                            Divider().padding(.horizontal, 16)
+                            limitedFullAccessRow
+                        }
+                        .cardEntrance(appeared: appeared, delay: 0.28)
                     }
-                }
 
-                // MARK: Notifications
-                Section {
-                    notificationRows
-                } header: {
-                    Text(lm.s.notificationsSection)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Theme.textSecondary)
-                        .textCase(nil)
-                }
+                    sectionCard(header: lm.s.notificationsSection) {
+                        notificationRows
+                    }
+                    .cardEntrance(appeared: appeared, delay: 0.28)
 
-                // MARK: About / Legal
-                Section {
-                    aboutRows
-                } header: {
-                    Text(lm.s.aboutSection)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Theme.textSecondary)
-                        .textCase(nil)
+                    sectionCard(header: lm.s.aboutSection) {
+                        aboutRows
+                    }
+                    .cardEntrance(appeared: appeared, delay: 0.35)
                 }
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 100)
             }
-            .scrollContentBackground(.hidden)
-            .contentMargins(.bottom, 96, for: .scrollContent)
         }
         .task { await notif.refreshStatus() }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
             Task { await notif.refreshStatus() }
         }
+        .onAppear {
+            withAnimation(.spring(response: 0.55, dampingFraction: 0.8).delay(0.05)) {
+                appeared = true
+            }
+        }
+    }
+
+    // MARK: - Background
+
+    private var backgroundGlows: some View {
+        ZStack {
+            Circle()
+                .fill(Theme.accent.opacity(0.10))
+                .frame(width: 260)
+                .blur(radius: 80)
+                .offset(x: -110, y: -280)
+            Circle()
+                .fill(Theme.accentEnd.opacity(0.07))
+                .frame(width: 200)
+                .blur(radius: 60)
+                .offset(x: 130, y: 100)
+        }
+        .allowsHitTesting(false)
+    }
+
+    // MARK: - App Header Card
+
+    private var appHeaderCard: some View {
+        HStack(spacing: 16) {
+            Image("SplashIcon")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 52, height: 52)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(Theme.border, lineWidth: 1)
+                )
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("SlideRoll")
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .foregroundStyle(Theme.textPrimary)
+                Text(lm.s.versionLabel + " " + appVersion)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Theme.textSecondary)
+            }
+
+            Spacer()
+
+            Text(appVersion)
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundStyle(Theme.accent)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 5)
+                .background(Theme.accent.opacity(0.12), in: Capsule())
+                .overlay(Capsule().strokeBorder(Theme.accent.opacity(0.2), lineWidth: 1))
+        }
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Theme.surface)
+                .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.border, lineWidth: 1))
+        )
+    }
+
+    // MARK: - Section Card Builder
+
+    @ViewBuilder
+    private func sectionCard(header: String, footer: String? = nil, @ViewBuilder content: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(header.uppercased())
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Theme.textTertiary)
+                .tracking(0.5)
+                .padding(.leading, 4)
+
+            VStack(spacing: 0) {
+                content()
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(Theme.surface)
+                    .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.border, lineWidth: 1))
+            )
+
+            if let footer {
+                Text(footer)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.textTertiary)
+                    .padding(.leading, 4)
+            }
+        }
+    }
+
+    // MARK: - Settings Row Helper
+
+    private func settingsRow(icon: String, iconColor: Color, title: String, trailing: AnyView) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle().fill(iconColor.opacity(0.15)).frame(width: 32, height: 32)
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(iconColor)
+            }
+            Text(title)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Theme.textPrimary)
+            Spacer()
+            trailing
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .contentShape(Rectangle())
     }
 
     // MARK: - Notification Rows
@@ -122,77 +209,69 @@ struct SettingsView: View {
                     }
                 }
             } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: "bell.badge.fill")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Theme.accent).frame(width: 28)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(s.allowNotifications)
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(Theme.textPrimary)
-                        Text(s.notifPermissionSub)
-                            .font(.system(size: 12))
-                            .foregroundStyle(Theme.textSecondary)
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Theme.textTertiary)
-                }
-                .padding(.vertical, 3)
-                .contentShape(Rectangle())
+                settingsRow(
+                    icon: "bell.badge.fill", iconColor: Theme.orange,
+                    title: s.allowNotifications,
+                    trailing: AnyView(
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text(s.notifPermissionSub)
+                                .font(.system(size: 11))
+                                .foregroundStyle(Theme.textSecondary)
+                                .multilineTextAlignment(.trailing)
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Theme.textTertiary)
+                        }
+                    )
+                )
             }
             .buttonStyle(.plain)
 
         case .denied:
-            HStack(spacing: 12) {
-                Image(systemName: "bell.slash.fill")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Theme.textTertiary).frame(width: 28)
+            settingsRow(
+                icon: "bell.slash.fill", iconColor: Theme.textTertiary,
+                title: s.notifDenied,
+                trailing: AnyView(
+                    Button(s.openSettings) {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Theme.accent)
+                )
+            )
+
+        default:
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle().fill(Theme.orange.opacity(0.15)).frame(width: 32, height: 32)
+                    Image(systemName: "bell.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Theme.orange)
+                }
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(s.notifDenied)
+                    Text(s.weeklyReminder)
                         .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(Theme.textSecondary)
-                    Text(s.notifDeniedSub)
+                        .foregroundStyle(Theme.textPrimary)
+                    Text(s.weeklyReminderSub)
                         .font(.system(size: 12))
                         .foregroundStyle(Theme.textSecondary)
                 }
                 Spacer()
-                Button(s.openSettings) {
-                    if let url = URL(string: UIApplication.openSettingsURLString) {
-                        UIApplication.shared.open(url)
+                Toggle("", isOn: Binding(
+                    get: { notif.enabled },
+                    set: { val in
+                        notif.enabled = val
+                        if val { notif.reschedule(language: lm.selected) }
+                        else   { notif.cancelAll() }
                     }
-                }
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Theme.accent)
+                ))
+                .tint(Theme.accent)
+                .labelsHidden()
             }
-            .padding(.vertical, 3)
-
-        default:
-            Toggle(isOn: Binding(
-                get: { notif.enabled },
-                set: { val in
-                    notif.enabled = val
-                    if val { notif.reschedule(language: lm.selected) }
-                    else   { notif.cancelAll() }
-                }
-            )) {
-                HStack(spacing: 12) {
-                    Image(systemName: "bell.fill")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Theme.accent).frame(width: 28)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(s.weeklyReminder)
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(Theme.textPrimary)
-                        Text(s.weeklyReminderSub)
-                            .font(.system(size: 12))
-                            .foregroundStyle(Theme.textSecondary)
-                    }
-                }
-            }
-            .tint(Theme.accent)
-
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
         }
     }
 
@@ -207,20 +286,15 @@ struct SettingsView: View {
                 Task { await vm.loadPhotos() }
             }
         } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "photo.badge.plus")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Theme.accent).frame(width: 28)
-                Text(lm.s.limitedAddMore)
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(Theme.textPrimary)
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Theme.textTertiary)
-            }
-            .padding(.vertical, 3)
-            .contentShape(Rectangle())
+            settingsRow(
+                icon: "photo.badge.plus", iconColor: Theme.accent,
+                title: lm.s.limitedAddMore,
+                trailing: AnyView(
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Theme.textTertiary)
+                )
+            )
         }
         .buttonStyle(.plain)
         .background { ViewControllerFinder { limitedHostVC = $0 } }
@@ -232,25 +306,20 @@ struct SettingsView: View {
                 UIApplication.shared.open(url)
             }
         } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "lock.open.fill")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Theme.accent).frame(width: 28)
-                Text(lm.s.limitedFullAccess)
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(Theme.textPrimary)
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Theme.textTertiary)
-            }
-            .padding(.vertical, 3)
-            .contentShape(Rectangle())
+            settingsRow(
+                icon: "lock.open.fill", iconColor: Theme.accent,
+                title: lm.s.limitedFullAccess,
+                trailing: AnyView(
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Theme.textTertiary)
+                )
+            )
         }
         .buttonStyle(.plain)
     }
 
-    // MARK: - About / Legal Rows
+    // MARK: - About Rows
 
     private static let privacyPolicyURL = URL(string: "https://mrtkrm.com/slideroll/privacy")!
     private static let supportURL = URL(string: "https://mrtkrm.com/slideroll/support")!
@@ -266,49 +335,46 @@ struct SettingsView: View {
         let s = lm.s
 
         Link(destination: Self.privacyPolicyURL) {
-            aboutRow(icon: "hand.raised.fill", title: s.privacyPolicy, showChevron: true)
+            settingsRow(
+                icon: "hand.raised.fill", iconColor: Theme.red,
+                title: s.privacyPolicy,
+                trailing: AnyView(
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Theme.textTertiary)
+                )
+            )
         }
         .buttonStyle(.plain)
+
+        Divider().padding(.horizontal, 16)
 
         Button {
             openURL(Self.supportURL)
         } label: {
-            aboutRow(icon: "envelope.fill", title: s.contactSupport, showChevron: true)
+            settingsRow(
+                icon: "envelope.fill", iconColor: Theme.accent,
+                title: s.contactSupport,
+                trailing: AnyView(
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Theme.textTertiary)
+                )
+            )
         }
         .buttonStyle(.plain)
 
-        HStack(spacing: 12) {
-            Image(systemName: "info.circle.fill")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Theme.accent).frame(width: 28)
-            Text(s.versionLabel)
-                .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(Theme.textPrimary)
-            Spacer()
-            Text(appVersion)
-                .font(.system(size: 14, weight: .medium, design: .rounded))
-                .foregroundStyle(Theme.textSecondary)
-        }
-        .padding(.vertical, 3)
-    }
+        Divider().padding(.horizontal, 16)
 
-    private func aboutRow(icon: String, title: String, showChevron: Bool) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Theme.accent).frame(width: 28)
-            Text(title)
-                .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(Theme.textPrimary)
-            Spacer()
-            if showChevron {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Theme.textTertiary)
-            }
-        }
-        .padding(.vertical, 3)
-        .contentShape(Rectangle())
+        settingsRow(
+            icon: "info.circle.fill", iconColor: Theme.accent,
+            title: s.versionLabel,
+            trailing: AnyView(
+                Text(appVersion)
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(Theme.textSecondary)
+            )
+        )
     }
 
     // MARK: - Appearance Picker
@@ -367,7 +433,8 @@ struct SettingsView: View {
             }
         }
         .padding(4)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
     }
 
     // MARK: - Color Palette
@@ -403,12 +470,32 @@ struct SettingsView: View {
                             .foregroundStyle(lm.selectedTheme == theme ? theme.accent : Theme.textTertiary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
-
                     }
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.vertical, 10)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 16)
+    }
+}
+
+// MARK: - Card Entrance Modifier
+
+private struct CardEntrance: ViewModifier {
+    let appeared: Bool
+    let delay: Double
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 24)
+            .animation(.spring(response: 0.55, dampingFraction: 0.8).delay(delay), value: appeared)
+    }
+}
+
+private extension View {
+    func cardEntrance(appeared: Bool, delay: Double) -> some View {
+        modifier(CardEntrance(appeared: appeared, delay: delay))
     }
 }
