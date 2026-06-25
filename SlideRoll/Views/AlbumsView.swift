@@ -224,38 +224,131 @@ struct AlbumsView: View {
     @Environment(LanguageManager.self) var lm
     @Environment(PhotoLibraryViewModel.self) var vm
     @State private var albumsVM = AlbumsViewModel()
+    @State private var showPicker = false
+
+    @AppStorage("pinnedAlbumIDs") private var pinnedRaw: String = ""
 
     private let tileHeights: [CGFloat] = [205, 155, 180, 145, 220, 165, 195, 150, 210, 170, 185, 140]
+
+    private var pinnedIDs: Set<String> {
+        Set(pinnedRaw.split(separator: ",").map(String.init).filter { !$0.isEmpty })
+    }
+
+    private var displayedAlbums: [(offset: Int, element: AlbumItem)] {
+        Array(albumsVM.albums.enumerated()).filter { pinnedIDs.contains($0.element.id) }
+    }
 
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            if albumsVM.isLoading {
+            if pinnedIDs.isEmpty {
+                emptyState
+            } else if albumsVM.isLoading {
                 skeletonView
             } else {
-                ScrollView(showsIndicators: false) {
-                    MasonryLayout(columns: 3, spacing: 5) {
-                        ForEach(Array(albumsVM.albums.enumerated()), id: \.offset) { idx, album in
-                            NavigationLink(destination: AlbumDetailView(
-                                collection: album.collection, title: album.title)) {
-                                AlbumTile(
-                                    album: album,
-                                    height: tileHeights[idx % tileHeights.count],
-                                    animationDelay: Double(idx) * 0.05
-                                )
-                            }
-                            .buttonStyle(AlbumTilePress())
-                        }
+                albumGrid
+            }
+        }
+        .toolbar {
+            if !pinnedIDs.isEmpty {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showPicker = true } label: {
+                        Image(systemName: "slider.horizontal.3")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(Theme.textPrimary)
                     }
-                    .padding(.horizontal, 5)
-                    .padding(.top, 8)
-                    .padding(.bottom, 120)
                 }
             }
         }
+        .sheet(isPresented: $showPicker) {
+            AlbumPickerSheet(albums: albumsVM.albums,
+                             isLoading: albumsVM.isLoading,
+                             pinnedRaw: $pinnedRaw)
+                .environment(lm)
+        }
         .task { await albumsVM.load() }
     }
+
+    // MARK: Grid
+
+    private var albumGrid: some View {
+        ScrollView(showsIndicators: false) {
+            MasonryLayout(columns: 3, spacing: 5) {
+                ForEach(displayedAlbums, id: \.element.id) { pair in
+                    NavigationLink(destination: AlbumDetailView(
+                        collection: pair.element.collection, title: pair.element.title)) {
+                        AlbumTile(
+                            album: pair.element,
+                            height: tileHeights[pair.offset % tileHeights.count],
+                            animationDelay: Double(pair.offset) * 0.05
+                        )
+                    }
+                    .buttonStyle(AlbumTilePress())
+                }
+            }
+            .padding(.horizontal, 5)
+            .padding(.top, 8)
+            .padding(.bottom, 120)
+        }
+    }
+
+    // MARK: Empty State
+
+    private var emptyState: some View {
+        VStack(spacing: 28) {
+            ZStack {
+                Circle()
+                    .fill(Color.white.opacity(0.05))
+                    .frame(width: 110, height: 110)
+                Circle()
+                    .fill(Color.white.opacity(0.04))
+                    .frame(width: 80, height: 80)
+                Image(systemName: "rectangle.stack.badge.plus")
+                    .font(.system(size: 36, weight: .light))
+                    .foregroundStyle(Color.white.opacity(0.35))
+            }
+
+            VStack(spacing: 10) {
+                Text("Albüm Ekle")
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                Text("Takip etmek istediğin albümleri seçerek\nkendi galerinizi oluşturun.")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.45))
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(3)
+            }
+
+            Button {
+                showPicker = true
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 13, weight: .bold))
+                    Text("Albüm Seç")
+                        .font(.system(size: 15, weight: .semibold))
+                }
+                .foregroundStyle(.black)
+                .padding(.horizontal, 28)
+                .padding(.vertical, 15)
+                .background(.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+            .opacity(albumsVM.isLoading ? 0.5 : 1)
+            .overlay(alignment: .trailing) {
+                if albumsVM.isLoading {
+                    ProgressView()
+                        .tint(.white)
+                        .scaleEffect(0.7)
+                        .offset(x: 44)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, 44)
+    }
+
+    // MARK: Skeleton
 
     private var skeletonView: some View {
         ScrollView(showsIndicators: false) {
@@ -272,6 +365,133 @@ struct AlbumsView: View {
             .padding(.bottom, 120)
         }
         .allowsHitTesting(false)
+    }
+}
+
+// MARK: - Album Picker Sheet
+
+struct AlbumPickerSheet: View {
+    let albums: [AlbumItem]
+    let isLoading: Bool
+    @Binding var pinnedRaw: String
+    @Environment(LanguageManager.self) var lm
+    @Environment(\.dismiss) private var dismiss
+
+    private var pinnedIDs: Set<String> {
+        Set(pinnedRaw.split(separator: ",").map(String.init).filter { !$0.isEmpty })
+    }
+
+    private func toggle(_ id: String) {
+        var set = pinnedIDs
+        if set.contains(id) { set.remove(id) } else { set.insert(id) }
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            pinnedRaw = set.joined(separator: ",")
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color(white: 0.07).ignoresSafeArea()
+
+                if isLoading {
+                    VStack(spacing: 14) {
+                        ProgressView().tint(.white)
+                        Text("Albümler yükleniyor…")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.5))
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    List {
+                        ForEach(albums) { album in
+                            Button { toggle(album.id) } label: {
+                                AlbumPickerRow(album: album, isPinned: pinnedIDs.contains(album.id))
+                            }
+                            .buttonStyle(.plain)
+                            .listRowBackground(Color(white: 0.12))
+                            .listRowSeparatorTint(Color.white.opacity(0.07))
+                        }
+                    }
+                    .scrollContentBackground(.hidden)
+                }
+            }
+            .navigationTitle("\(pinnedIDs.count) albüm seçili")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Tamam") { dismiss() }
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Theme.accent)
+                }
+                ToolbarItem(placement: .topBarLeading) {
+                    let allSelected = pinnedIDs.count == albums.count
+                    Button(allSelected ? "Temizle" : "Tümünü Seç") {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            if allSelected {
+                                pinnedRaw = ""
+                            } else {
+                                pinnedRaw = albums.map(\.id).joined(separator: ",")
+                            }
+                        }
+                    }
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(allSelected ? .white.opacity(0.45) : Theme.accent)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Album Picker Row
+
+struct AlbumPickerRow: View {
+    let album: AlbumItem
+    let isPinned: Bool
+
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                album.dominantColor
+                if let thumb = album.thumbnail {
+                    Image(uiImage: thumb)
+                        .resizable()
+                        .scaledToFill()
+                }
+            }
+            .frame(width: 54, height: 54)
+            .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    .strokeBorder(.white.opacity(0.08), lineWidth: 0.5)
+            )
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(album.title)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white)
+                Text("\(album.total.formatted()) öğe")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.white.opacity(0.45))
+            }
+
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .fill(isPinned ? Theme.accent : Color.white.opacity(0.08))
+                    .frame(width: 28, height: 28)
+                if isPinned {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.white)
+                        .transition(.scale.combined(with: .opacity))
+                }
+            }
+            .animation(.spring(response: 0.28, dampingFraction: 0.7), value: isPinned)
+        }
+        .padding(.vertical, 6)
+        .contentShape(Rectangle())
     }
 }
 
