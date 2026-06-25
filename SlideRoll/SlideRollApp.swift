@@ -1,10 +1,21 @@
 import SwiftUI
 import Photos
+import UserNotifications
 import GoogleMobileAds
 import AppTrackingTransparency
 
+// Shows notifications as banners even when the app is in the foreground.
+final class SlideRollNotifDelegate: NSObject, UNUserNotificationCenterDelegate {
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .sound, .badge])
+    }
+}
+
 @main
 struct SlideRollApp: App {
+    private let notifDelegate = SlideRollNotifDelegate()
     @State private var vm    = PhotoLibraryViewModel()
     @State private var lm    = LanguageManager()
     @State private var adMan = AdManager()
@@ -13,6 +24,7 @@ struct SlideRollApp: App {
 
     init() {
         MobileAds.shared.start(completionHandler: nil)
+        UNUserNotificationCenter.current().delegate = notifDelegate
     }
 
     private func requestTrackingIfNeeded() {
@@ -39,13 +51,20 @@ struct SlideRollApp: App {
                         requestTrackingIfNeeded()
                     }
                     await notif.refreshStatus()
-                    notif.reschedule(language: lm.selected)
+                    // Uygulama açıkken bekleyen bildirimleri iptal et
+                    notif.cancelAll()
                 }
                 .onChange(of: scenePhase) { _, phase in
-                    guard phase == .active else { return }
-                    Task {
-                        await notif.refreshStatus()
+                    switch phase {
+                    case .active:
+                        // Kullanıcı uygulamaya döndü — bekleyen bildirimleri iptal et
+                        Task { await notif.refreshStatus() }
+                        notif.cancelAll()
+                    case .background:
+                        // Kullanıcı uygulamayı kapattı — 5 ve 10 saat sonrası için planla
                         notif.reschedule(language: lm.selected)
+                    default:
+                        break
                     }
                 }
         }

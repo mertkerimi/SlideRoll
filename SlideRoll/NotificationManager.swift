@@ -9,10 +9,6 @@ final class NotificationManager {
 
     var permissionStatus: UNAuthorizationStatus = .notDetermined
 
-    // Last day-offset (from last app open) we schedule reminders for. Two
-    // notifications per active day → keep under iOS's 64 pending-request cap.
-    private static let lastDay = 30
-
     // MARK: - Permission
 
     func refreshStatus() async {
@@ -33,55 +29,45 @@ final class NotificationManager {
 
     // MARK: - Schedule
 
+    /// Kullanıcı uygulamayı kapattıktan 5 ve 10 saat sonra bildirim gönderir.
     func reschedule(language: AppLanguage) {
-        cancelAll()
         guard enabled, permissionStatus == .authorized || permissionStatus == .provisional
-        else { return }
+        else {
+            cancelAll()
+            return
+        }
+
+        cancelAll()
 
         let pool = messages(language).shuffled()
-        var msgIndex = 0
-        var notifIndex = 0
 
-        func fire(dayOffset: Int, hour: Int, minute: Int) {
-            let msg = pool[msgIndex % pool.count]; msgIndex += 1
-            scheduleAt(id: "slideroll.remind\(notifIndex)", dayOffset: dayOffset,
-                       hour: hour, minute: minute, title: msg.0, body: msg.1)
-            notifIndex += 1
+        // Tek seferlik bildirimler: giderek seyrekleşen aralıklar
+        let oneTimeHours: [Double] = [5, 10, 18, 30, 48]
+        for (i, h) in oneTimeHours.enumerated() {
+            let msg = pool[i % pool.count]
+            scheduleIn(h * 3600, id: "slideroll.remind.\(i+1)", title: msg.0, body: msg.1, repeats: false)
         }
 
-        let days = Array(1...Self.lastDay)
-
-        for day in days {
-            // Two per day: morning (09:00–11:59) and evening (19:00–23:59),
-            // at a random time within each window so it doesn't feel robotic.
-            fire(dayOffset: day, hour: Int.random(in: 9...11),  minute: Int.random(in: 0...59))
-            fire(dayOffset: day, hour: Int.random(in: 19...23), minute: Int.random(in: 0...59))
-        }
+        // Son bildirim: her 72 saatte bir tekrarlar — kullanıcı uygulamayı açana kadar
+        let msg = pool[oneTimeHours.count % pool.count]
+        scheduleIn(72 * 3600, id: "slideroll.remind.repeat", title: msg.0, body: msg.1, repeats: true)
     }
 
     func cancelAll() {
-        // We are the only source of notifications, so clearing everything also
-        // sweeps away any stragglers from older builds.
         UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        UNUserNotificationCenter.current().removeAllDeliveredNotifications()
     }
 
     // MARK: - Private
 
-    /// Fires `dayOffset` days from now at the given local hour and minute.
-    private func scheduleAt(id: String, dayOffset: Int, hour: Int, minute: Int, title: String, body: String) {
-        let cal = Calendar.current
-        guard let day = cal.date(byAdding: .day, value: dayOffset, to: Date()) else { return }
-        var comps = cal.dateComponents([.year, .month, .day], from: day)
-        comps.hour = hour
-        comps.minute = minute
-
+    private func scheduleIn(_ seconds: TimeInterval, id: String, title: String, body: String, repeats: Bool) {
         let content = UNMutableNotificationContent()
         content.title = title
         content.body  = body
         content.sound = .default
-        let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: seconds, repeats: repeats)
         let req = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
-        UNUserNotificationCenter.current().add(req)
+        UNUserNotificationCenter.current().add(req) { _ in }
     }
 
     // MARK: - Content

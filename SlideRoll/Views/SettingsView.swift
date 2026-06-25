@@ -62,7 +62,7 @@ struct SettingsView: View {
                     }
 
                     sectionCard(header: lm.s.notificationsSection) {
-                        notificationRows
+                        notificationRow
                     }
                     .cardEntrance(appeared: appeared, delay: 0.28)
 
@@ -196,87 +196,32 @@ struct SettingsView: View {
         .contentShape(Rectangle())
     }
 
-    // MARK: - Notification Rows
+    // MARK: - Notification Row
 
-    @ViewBuilder
-    private var notificationRows: some View {
-        let s = lm.s
-        switch notif.permissionStatus {
-
-        case .notDetermined:
-            Button {
-                Task {
-                    let ok = await notif.requestPermission()
-                    if ok {
-                        notif.enabled = true
-                        notif.reschedule(language: lm.selected)
-                    }
-                }
-            } label: {
-                settingsRow(
-                    icon: "bell.badge.fill", iconColor: Theme.orange,
-                    title: s.allowNotifications,
-                    trailing: AnyView(
-                        VStack(alignment: .trailing, spacing: 2) {
-                            Text(s.notifPermissionSub)
-                                .font(.system(size: 11))
-                                .foregroundStyle(Theme.textSecondary)
-                                .multilineTextAlignment(.trailing)
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(Theme.textTertiary)
-                        }
-                    )
-                )
+    private var notificationRow: some View {
+        let isOn = notif.permissionStatus == .authorized || notif.permissionStatus == .provisional
+        return Button {
+            if let url = URL(string: UIApplication.openSettingsURLString) {
+                UIApplication.shared.open(url)
             }
-            .buttonStyle(.plain)
-
-        case .denied:
+        } label: {
             settingsRow(
-                icon: "bell.slash.fill", iconColor: Theme.textTertiary,
-                title: s.notifDenied,
+                icon: isOn ? "bell.fill" : "bell.slash.fill",
+                iconColor: isOn ? Theme.orange : Theme.textTertiary,
+                title: lm.s.notificationsSection,
                 trailing: AnyView(
-                    Button(s.openSettings) {
-                        if let url = URL(string: UIApplication.openSettingsURLString) {
-                            UIApplication.shared.open(url)
-                        }
+                    HStack(spacing: 4) {
+                        Text(isOn ? lm.s.notifOn : lm.s.notifOff)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(isOn ? Theme.green : Theme.textTertiary)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Theme.textTertiary)
                     }
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Theme.accent)
                 )
             )
-
-        default:
-            HStack(spacing: 14) {
-                ZStack {
-                    Circle().fill(Theme.orange.opacity(0.15)).frame(width: 32, height: 32)
-                    Image(systemName: "bell.fill")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Theme.orange)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(s.weeklyReminder)
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(Theme.textPrimary)
-                    Text(s.weeklyReminderSub)
-                        .font(.system(size: 12))
-                        .foregroundStyle(Theme.textSecondary)
-                }
-                Spacer()
-                Toggle("", isOn: Binding(
-                    get: { notif.enabled },
-                    set: { val in
-                        notif.enabled = val
-                        if val { notif.reschedule(language: lm.selected) }
-                        else   { notif.cancelAll() }
-                    }
-                ))
-                .tint(Theme.accent)
-                .labelsHidden()
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
         }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Limited Access Rows
