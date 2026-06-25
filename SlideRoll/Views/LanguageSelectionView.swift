@@ -60,6 +60,11 @@ struct LanguageSelectionView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) { dismiss() }
         } label: {
             HStack(spacing: 14) {
+                Text(lang.flag)
+                    .font(.system(size: 28))
+                    .frame(width: 40, height: 40)
+                    .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+
                 VStack(alignment: .leading, spacing: 2) {
                     Text(lang.displayName)
                         .font(.system(size: 16, weight: .medium))

@@ -4,12 +4,19 @@ import UIKit
 
 // MARK: - Model
 
+enum AlbumKind: String {
+    case smart  // iPhone'un otomatik oluşturduğu (Favoriler, Live Photos, vb.)
+    case shared // Paylaşılan albümler
+    case user   // Kullanıcının oluşturduğu albümler
+}
+
 struct AlbumItem: Identifiable {
     let id: String
     let collection: PHAssetCollection
     let title: String
     let photoCount: Int
     let videoCount: Int
+    var kind: AlbumKind = .user
     var thumbnail: UIImage?
     var dominantColor: Color = Color(white: 0.18)
     var reviewed: Int = 0
@@ -49,6 +56,28 @@ extension UIImage {
     }
 }
 
+// MARK: - Strings+SmartAlbums (Photos dependency stays in this file)
+
+extension Strings {
+    func smartAlbumTitle(_ subtype: PHAssetCollectionSubtype) -> String? {
+        switch subtype {
+        case .smartAlbumSelfPortraits:  return smartSelfies
+        case .smartAlbumScreenshots:    return smartScreenshots
+        case .smartAlbumFavorites:      return smartFavorites
+        case .smartAlbumVideos:         return smartVideos
+        case .smartAlbumBursts:         return smartBursts
+        case .smartAlbumPanoramas:      return smartPanoramas
+        case .smartAlbumSlomoVideos:    return smartSlowMotion
+        case .smartAlbumTimelapses:     return smartTimelapse
+        case .smartAlbumAnimated:       return smartAnimated
+        case .smartAlbumLivePhotos:     return smartLivePhotos
+        case .smartAlbumDepthEffect:    return smartPortrait
+        case .smartAlbumRecentlyAdded:  return smartRecentlyAdded
+        default:                        return nil
+        }
+    }
+}
+
 // MARK: - ViewModel
 
 @Observable
@@ -57,12 +86,16 @@ final class AlbumsViewModel {
     var isLoading = true
     private let imageManager = PHCachingImageManager()
 
-    func load() async {
+    func load(strings: Strings) async {
         var items: [AlbumItem] = []
+
+        // --- Sistem albümleri (kind: .smart) — Recents/UserLibrary kasıtlı hariç ---
         let smartTypes: [PHAssetCollectionSubtype] = [
-            .smartAlbumUserLibrary, .smartAlbumSelfPortraits, .smartAlbumScreenshots,
+            .smartAlbumSelfPortraits, .smartAlbumScreenshots,
             .smartAlbumFavorites, .smartAlbumVideos, .smartAlbumBursts,
-            .smartAlbumPanoramas, .smartAlbumSlomoVideos, .smartAlbumTimelapses, .smartAlbumAnimated
+            .smartAlbumPanoramas, .smartAlbumSlomoVideos, .smartAlbumTimelapses,
+            .smartAlbumAnimated, .smartAlbumLivePhotos, .smartAlbumDepthEffect,
+            .smartAlbumRecentlyAdded
         ]
         for subtype in smartTypes {
             PHAssetCollection.fetchAssetCollections(with: .smartAlbum, subtype: subtype, options: nil)
@@ -72,11 +105,31 @@ final class AlbumsViewModel {
                     let vo = PHFetchOptions()
                     vo.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.video.rawValue)
                     let vids = PHAsset.fetchAssets(in: col, options: vo).count
+                    let title = strings.smartAlbumTitle(subtype) ?? col.localizedTitle ?? ""
                     items.append(AlbumItem(id: col.localIdentifier, collection: col,
-                                           title: col.localizedTitle ?? "",
-                                           photoCount: all.count - vids, videoCount: vids))
+                                           title: title,
+                                           photoCount: all.count - vids, videoCount: vids,
+                                           kind: .smart))
                 }
         }
+
+        // --- Paylaşılan albümler (kind: .shared) ---
+        let so = PHFetchOptions()
+        so.sortDescriptors = [NSSortDescriptor(key: "localizedTitle", ascending: true)]
+        PHAssetCollection.fetchAssetCollections(with: .album, subtype: .albumCloudShared, options: so)
+            .enumerateObjects { col, _, _ in
+                let all = PHAsset.fetchAssets(in: col, options: nil)
+                guard all.count > 0 else { return }
+                let vo = PHFetchOptions()
+                vo.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.video.rawValue)
+                let vids = PHAsset.fetchAssets(in: col, options: vo).count
+                items.append(AlbumItem(id: col.localIdentifier, collection: col,
+                                       title: col.localizedTitle ?? "",
+                                       photoCount: all.count - vids, videoCount: vids,
+                                       kind: .shared))
+            }
+
+        // --- Kullanıcı albümleri (kind: .user) ---
         let fo = PHFetchOptions()
         fo.sortDescriptors = [NSSortDescriptor(key: "localizedTitle", ascending: true)]
         PHAssetCollection.fetchAssetCollections(with: .album, subtype: .albumRegular, options: fo)
@@ -88,7 +141,8 @@ final class AlbumsViewModel {
                 let vids = PHAsset.fetchAssets(in: col, options: vo).count
                 items.append(AlbumItem(id: col.localIdentifier, collection: col,
                                        title: col.localizedTitle ?? "",
-                                       photoCount: all.count - vids, videoCount: vids))
+                                       photoCount: all.count - vids, videoCount: vids,
+                                       kind: .user))
             }
         // Show grid immediately with color placeholders — no waiting for thumbnails
         await MainActor.run { self.albums = items; self.isLoading = false }
@@ -267,7 +321,7 @@ struct AlbumsView: View {
                              pinnedRaw: $pinnedRaw)
                 .environment(lm)
         }
-        .task { await albumsVM.load() }
+        .task { await albumsVM.load(strings: lm.s) }
     }
 
     // MARK: Grid
@@ -310,10 +364,10 @@ struct AlbumsView: View {
             }
 
             VStack(spacing: 10) {
-                Text("Albüm Ekle")
+                Text(lm.s.albumsEmptyTitle)
                     .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
-                Text("Takip etmek istediğin albümleri seçerek\nkendi galerinizi oluşturun.")
+                Text(lm.s.albumsEmptyDesc)
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(.white.opacity(0.45))
                     .multilineTextAlignment(.center)
@@ -326,7 +380,7 @@ struct AlbumsView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "plus")
                         .font(.system(size: 13, weight: .bold))
-                    Text("Albüm Seç")
+                    Text(lm.s.albumsAddButton)
                         .font(.system(size: 15, weight: .semibold))
                 }
                 .foregroundStyle(.black)
@@ -381,6 +435,10 @@ struct AlbumPickerSheet: View {
         Set(pinnedRaw.split(separator: ",").map(String.init).filter { !$0.isEmpty })
     }
 
+    private var smartAlbums:  [AlbumItem] { albums.filter { $0.kind == .smart  } }
+    private var sharedAlbums: [AlbumItem] { albums.filter { $0.kind == .shared } }
+    private var userAlbums:   [AlbumItem] { albums.filter { $0.kind == .user   } }
+
     private func toggle(_ id: String) {
         var set = pinnedIDs
         if set.contains(id) { set.remove(id) } else { set.insert(id) }
@@ -397,36 +455,66 @@ struct AlbumPickerSheet: View {
                 if isLoading {
                     VStack(spacing: 14) {
                         ProgressView().tint(.white)
-                        Text("Albümler yükleniyor…")
+                        Text(lm.s.albumsLoading)
                             .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(.white.opacity(0.5))
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     List {
-                        ForEach(albums) { album in
-                            Button { toggle(album.id) } label: {
-                                AlbumPickerRow(album: album, isPinned: pinnedIDs.contains(album.id))
+                        if !smartAlbums.isEmpty {
+                            Section {
+                                ForEach(smartAlbums) { album in
+                                    albumRow(album)
+                                }
+                            } header: {
+                                pickerSectionHeader(lm.s.albumsSectionSmart,
+                                                    icon: "iphone",
+                                                    count: smartAlbums.filter { pinnedIDs.contains($0.id) }.count,
+                                                    total: smartAlbums.count)
                             }
-                            .buttonStyle(.plain)
-                            .listRowBackground(Color(white: 0.12))
-                            .listRowSeparatorTint(Color.white.opacity(0.07))
+                        }
+
+                        if !sharedAlbums.isEmpty {
+                            Section {
+                                ForEach(sharedAlbums) { album in
+                                    albumRow(album)
+                                }
+                            } header: {
+                                pickerSectionHeader(lm.s.albumsSectionShared,
+                                                    icon: "person.2",
+                                                    count: sharedAlbums.filter { pinnedIDs.contains($0.id) }.count,
+                                                    total: sharedAlbums.count)
+                            }
+                        }
+
+                        if !userAlbums.isEmpty {
+                            Section {
+                                ForEach(userAlbums) { album in
+                                    albumRow(album)
+                                }
+                            } header: {
+                                pickerSectionHeader(lm.s.albumsSectionUser,
+                                                    icon: "rectangle.stack",
+                                                    count: userAlbums.filter { pinnedIDs.contains($0.id) }.count,
+                                                    total: userAlbums.count)
+                            }
                         }
                     }
                     .scrollContentBackground(.hidden)
                 }
             }
-            .navigationTitle("\(pinnedIDs.count) albüm seçili")
+            .navigationTitle(lm.s.albumsSelectedCount(pinnedIDs.count))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Tamam") { dismiss() }
+                    Button(lm.s.done) { dismiss() }
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Theme.accent)
                 }
                 ToolbarItem(placement: .topBarLeading) {
                     let allSelected = pinnedIDs.count == albums.count
-                    Button(allSelected ? "Temizle" : "Tümünü Seç") {
+                    Button(allSelected ? lm.s.albumsClear : lm.s.selectAll) {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                             if allSelected {
                                 pinnedRaw = ""
@@ -441,6 +529,37 @@ struct AlbumPickerSheet: View {
             }
         }
     }
+
+    @ViewBuilder
+    private func albumRow(_ album: AlbumItem) -> some View {
+        Button { toggle(album.id) } label: {
+            AlbumPickerRow(album: album, isPinned: pinnedIDs.contains(album.id))
+        }
+        .buttonStyle(.plain)
+        .listRowBackground(Color(white: 0.12))
+        .listRowSeparatorTint(Color.white.opacity(0.07))
+    }
+
+    @ViewBuilder
+    private func pickerSectionHeader(_ title: String, icon: String, count: Int, total: Int) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Theme.accent)
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.55))
+            Spacer()
+            if count > 0 {
+                Text("\(count)/\(total)")
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(Theme.accent.opacity(0.8))
+            }
+        }
+        .textCase(nil)
+        .padding(.vertical, 2)
+        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
+    }
 }
 
 // MARK: - Album Picker Row
@@ -448,6 +567,7 @@ struct AlbumPickerSheet: View {
 struct AlbumPickerRow: View {
     let album: AlbumItem
     let isPinned: Bool
+    @Environment(LanguageManager.self) var lm
 
     var body: some View {
         HStack(spacing: 14) {
@@ -470,7 +590,7 @@ struct AlbumPickerRow: View {
                 Text(album.title)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(.white)
-                Text("\(album.total.formatted()) öğe")
+                Text(lm.s.statItemCount(album.total))
                     .font(.system(size: 13))
                     .foregroundStyle(.white.opacity(0.45))
             }
