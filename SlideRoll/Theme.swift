@@ -56,3 +56,21 @@ extension Int {
     /// Binlik ayraçlı format — cihaz locale'i kullanır (TR: 14.506, EN: 14,506)
     var fmtCount: String { formatted(.number) }
 }
+
+// MARK: - Shared entrance animation
+
+struct SlideInModifier: ViewModifier {
+    let delay: Double
+    @State private var appeared = false
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 24)
+            .onAppear {
+                withAnimation(.spring(response: 0.48, dampingFraction: 0.78).delay(delay)) {
+                    appeared = true
+                }
+            }
+    }
+}

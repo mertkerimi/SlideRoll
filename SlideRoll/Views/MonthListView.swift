@@ -135,6 +135,7 @@ struct MonthListView: View {
                         .anchorPreference(key: TourAnchorKey.self, value: .bounds) { anchor in
                             index == 0 ? [.yearCards: anchor] : [:]
                         }
+                        .modifier(SlideInModifier(delay: Double(index) * 0.07))
                     }
                 }
                 .padding(.horizontal, 20)
@@ -510,6 +511,7 @@ struct MonthsForYearView: View {
                             .anchorPreference(key: TourAnchorKey.self, value: .bounds) { anchor in
                                 index == 0 ? [.monthCards: anchor] : [:]
                             }
+                            .modifier(SlideInModifier(delay: Double(index) * 0.06))
                     }
                 }
                 .padding(.horizontal, 20)
