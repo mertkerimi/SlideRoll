@@ -17,6 +17,8 @@ extension Notification.Name {
     static let tourNavigateToFirstYear = Notification.Name("tourNavigateToFirstYear")
     static let widgetOpenYear = Notification.Name("widgetOpenYear")
     static let widgetOpenShuffle = Notification.Name("widgetOpenShuffle")
+    static let hideTabBar = Notification.Name("hideTabBar")
+    static let showTabBar = Notification.Name("showTabBar")
 }
 
 struct TourAnchorModifier: ViewModifier {

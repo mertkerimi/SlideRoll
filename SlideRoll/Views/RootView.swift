@@ -12,6 +12,7 @@ struct RootView: View {
     @State private var selectedTab: AppTab = .home
     @AppStorage("hasSeenAppTour") private var hasSeenAppTour = false
     @State private var showTour = false
+    @State private var tabBarHidden = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -67,8 +68,17 @@ struct RootView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .id(lm.themeVersion)
 
-            floatingTabBar
-                .padding(.bottom, 24)
+            if !tabBarHidden {
+                floatingTabBar
+                    .padding(.bottom, 24)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .hideTabBar)) { _ in
+            withAnimation(.easeInOut(duration: 0.2)) { tabBarHidden = true }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .showTabBar)) { _ in
+            withAnimation(.easeInOut(duration: 0.2)) { tabBarHidden = false }
         }
         .ignoresSafeArea(edges: .bottom)
         .onOpenURL { url in

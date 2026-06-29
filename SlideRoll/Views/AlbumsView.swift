@@ -19,6 +19,7 @@ struct AlbumItem: Identifiable {
     var kind: AlbumKind = .user
     var thumbnail: UIImage?
     var dominantColor: Color = Color(white: 0.18)
+    var photoIDs: [String] = []
     var reviewed: Int = 0
     var deleted: Int = 0
     var total: Int   { photoCount + videoCount }
@@ -106,10 +107,12 @@ final class AlbumsViewModel {
                     vo.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.video.rawValue)
                     let vids = PHAsset.fetchAssets(in: col, options: vo).count
                     let title = strings.smartAlbumTitle(subtype) ?? col.localizedTitle ?? ""
+                    var ids: [String] = []
+                    all.enumerateObjects { a, _, _ in ids.append(a.localIdentifier) }
                     items.append(AlbumItem(id: col.localIdentifier, collection: col,
                                            title: title,
                                            photoCount: all.count - vids, videoCount: vids,
-                                           kind: .smart))
+                                           kind: .smart, photoIDs: ids))
                 }
         }
 
@@ -123,10 +126,12 @@ final class AlbumsViewModel {
                 let vo = PHFetchOptions()
                 vo.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.video.rawValue)
                 let vids = PHAsset.fetchAssets(in: col, options: vo).count
+                var ids: [String] = []
+                all.enumerateObjects { a, _, _ in ids.append(a.localIdentifier) }
                 items.append(AlbumItem(id: col.localIdentifier, collection: col,
                                        title: col.localizedTitle ?? "",
                                        photoCount: all.count - vids, videoCount: vids,
-                                       kind: .shared))
+                                       kind: .shared, photoIDs: ids))
             }
 
         // --- Kullanıcı albümleri (kind: .user) ---
@@ -139,10 +144,12 @@ final class AlbumsViewModel {
                 let vo = PHFetchOptions()
                 vo.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.video.rawValue)
                 let vids = PHAsset.fetchAssets(in: col, options: vo).count
+                var ids: [String] = []
+                all.enumerateObjects { a, _, _ in ids.append(a.localIdentifier) }
                 items.append(AlbumItem(id: col.localIdentifier, collection: col,
                                        title: col.localizedTitle ?? "",
                                        photoCount: all.count - vids, videoCount: vids,
-                                       kind: .user))
+                                       kind: .user, photoIDs: ids))
             }
         // Show grid immediately with color placeholders — no waiting for thumbnails
         await MainActor.run { self.albums = items; self.isLoading = false }
@@ -288,8 +295,20 @@ struct AlbumsView: View {
         Set(pinnedRaw.split(separator: ",").map(String.init).filter { !$0.isEmpty })
     }
 
+    private var albumsWithStats: [AlbumItem] {
+        let allDecisions = vm.monthGroups.reduce(into: [String: PhotoDecision]()) { acc, g in
+            for (id, d) in g.decisions { acc[id] = d }
+        }
+        return albumsVM.albums.map { album in
+            var a = album
+            a.reviewed = album.photoIDs.filter { allDecisions[$0] == .keep || allDecisions[$0] == .delete }.count
+            a.deleted  = vm.deletedCountByAlbum[album.id, default: 0]
+            return a
+        }
+    }
+
     private var displayedAlbums: [(offset: Int, element: AlbumItem)] {
-        Array(albumsVM.albums.enumerated()).filter { pinnedIDs.contains($0.element.id) }
+        Array(albumsWithStats.enumerated()).filter { pinnedIDs.contains($0.element.id) }
     }
 
     var body: some View {
@@ -330,8 +349,9 @@ struct AlbumsView: View {
         ScrollView(showsIndicators: false) {
             MasonryLayout(columns: 3, spacing: 5) {
                 ForEach(displayedAlbums, id: \.element.id) { pair in
-                    NavigationLink(destination: AlbumDetailView(
-                        collection: pair.element.collection, title: pair.element.title)) {
+                    NavigationLink(destination: AlbumReviewView(album: pair.element)
+                        .environment(vm)
+                        .environment(lm)) {
                         AlbumTile(
                             album: pair.element,
                             height: tileHeights[pair.offset % tileHeights.count],
@@ -661,16 +681,31 @@ struct AlbumTile: View {
 
             // Bottom info
             VStack(alignment: .leading, spacing: 3) {
-                if album.reviewed > 0 {
-                    GeometryReader { g in
-                        ZStack(alignment: .leading) {
-                            Capsule().fill(.white.opacity(0.18)).frame(height: 2)
-                            Capsule()
-                                .fill(Theme.green)
-                                .frame(width: g.size.width * album.progress, height: 2)
-                        }
+                if album.reviewed > 0 || album.deleted > 0 {
+                    HStack(spacing: 6) {
+                        Text("\(album.reviewed)")
+                            .foregroundStyle(album.reviewed > 0 ? Theme.green : .white.opacity(0.25))
+                        Text("\(album.deleted)")
+                            .foregroundStyle(album.deleted > 0 ? Theme.red : .white.opacity(0.25))
+                        Text("\(album.pending)")
+                            .foregroundStyle(.white.opacity(album.pending > 0 ? 0.45 : 0.2))
+                    }
+                    .font(.system(size: 9, weight: .semibold, design: .rounded))
+                }
+                HStack(spacing: 4) {
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(.white.opacity(0.12))
+                        Capsule()
+                            .fill(Theme.green)
+                            .scaleEffect(x: album.progress, anchor: .leading)
                     }
                     .frame(height: 2)
+                    if album.reviewed > 0 {
+                        Text("\(Int(album.progress * 100))%")
+                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                            .foregroundStyle(Theme.green.opacity(0.85))
+                            .fixedSize()
+                    }
                 }
                 Text(album.title)
                     .font(.system(size: 12, weight: .bold))
@@ -697,17 +732,9 @@ struct AlbumTile: View {
                 .background(Color.black.opacity(0.52), in: Capsule())
                 .padding(8)
         }
-        // Heart badge — semi-transparent circle, no blur
-        .overlay(alignment: .topTrailing) {
-            Image(systemName: album.reviewed > 0 ? "heart.fill" : "heart")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(album.reviewed > 0 ? Theme.green : .white.opacity(0.85))
-                .padding(6)
-                .background(Color.black.opacity(0.52), in: Circle())
-                .padding(8)
-        }
         // Tile-local entrance animation: scale + fade, delay set by index
         .scaleEffect(appeared ? 1 : 0.82, anchor: .bottom)
+
         .opacity(appeared ? 1 : 0)
         .onAppear {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.72).delay(animationDelay)) {
