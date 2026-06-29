@@ -53,6 +53,17 @@ class PhotoLibraryViewModel {
         set { UserDefaults.standard.set(newValue, forKey: "DeletedCountByMonth") }
     }
 
+    var deletedCountByAlbum: [String: Int] {
+        get { UserDefaults.standard.dictionary(forKey: "DeletedCountByAlbum") as? [String: Int] ?? [:] }
+        set { UserDefaults.standard.set(newValue, forKey: "DeletedCountByAlbum") }
+    }
+
+    // Maps photoID → albumID so permanentlyDeleteTrash can credit the right album
+    var photoAlbumMap: [String: String] {
+        get { UserDefaults.standard.dictionary(forKey: "PhotoAlbumMap") as? [String: String] ?? [:] }
+        set { UserDefaults.standard.set(newValue, forKey: "PhotoAlbumMap") }
+    }
+
     let imageManager = PHCachingImageManager()
     private let persistenceKey = "PhotoCleanerDecisions"
     private var allAssets: [String: PHAsset] = [:]
@@ -474,6 +485,17 @@ class PhotoLibraryViewModel {
         }
         deletedCountByYear = byYear
         deletedCountByMonth = byMonth
+
+        var byAlbum = deletedCountByAlbum
+        var albumMap = photoAlbumMap
+        for id in ids {
+            if let albumID = albumMap[id] {
+                byAlbum[albumID, default: 0] += 1
+                albumMap.removeValue(forKey: id)
+            }
+        }
+        deletedCountByAlbum = byAlbum
+        photoAlbumMap = albumMap
 
         totalDeletedCount += ids.count
         Self.sharedDefaults.set(totalDeletedCount, forKey: "widgetDeletedCount")
