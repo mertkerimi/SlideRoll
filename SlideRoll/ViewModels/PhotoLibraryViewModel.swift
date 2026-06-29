@@ -1,7 +1,6 @@
 import Foundation
 import Photos
 import SwiftUI
-import Observation
 import WidgetKit
 
 @Observable
@@ -18,7 +17,6 @@ class PhotoLibraryViewModel {
     var videoCount: Int = 0
     var photoBytes: Int64 = 0
     var videoBytes: Int64 = 0
-    var favoritesCount: Int = 0
     var duplicateGroups: [[String]] = []
     var yearlyStorage: [(year: String, bytes: Int64)] = []
     var largestPhotos: [(id: String, bytes: Int64, date: Date)] = []
@@ -589,7 +587,6 @@ class PhotoLibraryViewModel {
         await Task.detached(priority: .userInitiated) {
             var pBytes: Int64 = 0
             var vBytes: Int64 = 0
-            var favorites = 0
             var yearMap: [String: Int64] = [:]
             let dayFormatter = DateFormatter(); dayFormatter.dateFormat = "yyyy-MM-dd"
             let yearFormatter = DateFormatter(); yearFormatter.dateFormat = "yyyy"
@@ -603,7 +600,6 @@ class PhotoLibraryViewModel {
                     size += Self.resourceBytes(resource)
                 }
                 pBytes += size
-                if asset.isFavorite { favorites += 1 }
                 let date = asset.creationDate ?? Date.distantPast
                 yearMap[yearFormatter.string(from: date), default: 0] += size
                 dayBuckets[dayFormatter.string(from: date), default: []].append((id: asset.localIdentifier, size: size))
@@ -662,7 +658,6 @@ class PhotoLibraryViewModel {
             Task { @MainActor in
                 self.photoBytes      = pBytes
                 self.videoBytes      = vBytes
-                self.favoritesCount  = favorites
                 self.duplicateGroups = dupGroups
                 self.yearlyStorage   = yearly
                 self.largestPhotos   = finalPhotos

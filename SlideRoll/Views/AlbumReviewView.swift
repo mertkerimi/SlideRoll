@@ -36,9 +36,6 @@ struct AlbumReviewView: View {
     private var deleteCount: Int { localDecisions.values.filter { $0 == .delete }.count }
     private var skipCount:   Int { localDecisions.values.filter { $0 == .skip   }.count }
     private var reviewedCount: Int { keepCount + deleteCount + skipCount }
-    private var progress: Double {
-        pendingIDs.isEmpty ? 0 : Double(reviewedCount) / Double(pendingIDs.count + reviewedCount - skipCount)
-    }
 
     var body: some View {
         ZStack {
