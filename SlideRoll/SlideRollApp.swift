@@ -16,10 +16,11 @@ final class SlideRollNotifDelegate: NSObject, UNUserNotificationCenterDelegate {
 @main
 struct SlideRollApp: App {
     private let notifDelegate = SlideRollNotifDelegate()
-    @State private var vm    = PhotoLibraryViewModel()
-    @State private var lm    = LanguageManager()
-    @State private var adMan = AdManager()
-    @State private var notif = NotificationManager()
+    @State private var vm      = PhotoLibraryViewModel()
+    @State private var lm      = LanguageManager()
+    @State private var adMan   = AdManager()
+    @State private var notif   = NotificationManager()
+    @State private var subMan  = SubscriptionManager()
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -42,6 +43,7 @@ struct SlideRollApp: App {
                 .environment(lm)
                 .environment(adMan)
                 .environment(notif)
+                .environment(subMan)
                 .preferredColorScheme(lm.appearanceMode.colorScheme)
                 .animation(.smooth(duration: 0.5), value: lm.appearanceMode)
                 .task {
@@ -50,6 +52,8 @@ struct SlideRollApp: App {
                         await vm.loadPhotos()
                         requestTrackingIfNeeded()
                     }
+                    await subMan.loadProducts()
+                    adMan.isPremium = subMan.isPremium
                     await notif.refreshStatus()
                     // Uygulama açıkken bekleyen bildirimleri iptal et
                     notif.cancelAll()

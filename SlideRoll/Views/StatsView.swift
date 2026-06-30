@@ -3,8 +3,10 @@ import SwiftUI
 struct StatsView: View {
     @Environment(PhotoLibraryViewModel.self) var vm
     @Environment(LanguageManager.self) var lm
+    @Environment(SubscriptionManager.self) var subManager
 
     @State private var showDuplicates = false
+    @State private var showPaywall = false
     @State private var selectedLargest: IdentifiablePhoto? = nil
     @State private var mediaTab = 0
     var body: some View {
@@ -15,6 +17,9 @@ struct StatsView: View {
         }
         .sheet(isPresented: $showDuplicates) {
             DuplicatesView().environment(vm).environment(lm)
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView().environment(subManager).environment(lm)
         }
         .sheet(item: $selectedLargest) { photo in
             LargestPhotoDetailView(photoID: photo.id, bytes: photo.bytes, date: photo.date, isVideo: photo.isVideo)
@@ -48,6 +53,8 @@ struct StatsView: View {
                         yearChartCard
                             .transition(.opacity.combined(with: .move(edge: .bottom)))
                     }
+                    duplicateFinderCard
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
                     summaryCard
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
                 } else {
@@ -221,6 +228,57 @@ struct StatsView: View {
             RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Theme.surface)
                 .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.border, lineWidth: 1))
         )
+    }
+
+    // MARK: - Duplicate Finder Card
+
+    private var duplicateFinderCard: some View {
+        let isTR = lm.selected == .turkish
+        return Button {
+            if subManager.isPremium {
+                showDuplicates = true
+            } else {
+                showPaywall = true
+            }
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Theme.accent.opacity(0.15))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: "doc.on.doc.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Theme.accentGradient)
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(lm.s.dupTitle)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text(isTR ? "Benzer fotoğrafları bul ve temizle" : "Find and clean similar photos")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                Spacer()
+                if !subManager.isPremium {
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Theme.accent)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(Theme.accent.opacity(0.12), in: Capsule())
+                } else {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Theme.textTertiary)
+                }
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Theme.surface)
+                    .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.border, lineWidth: 1))
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - SlideRoll Card

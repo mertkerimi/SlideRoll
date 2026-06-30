@@ -5,6 +5,7 @@ struct GlobalReviewView: View {
     @Environment(PhotoLibraryViewModel.self) var vm
     @Environment(LanguageManager.self) var lm
     @Environment(AdManager.self) var adManager
+    @Environment(SubscriptionManager.self) var subManager
     @Environment(\.dismiss) var dismiss
 
     @State private var pendingIDs: [String] = []
@@ -14,6 +15,7 @@ struct GlobalReviewView: View {
     @State private var cardID = UUID()
     @State private var cardFlyout: SwipeDirection? = nil
     @State private var showTrash = false
+    @State private var showPaywall = false
     @State private var swipeCount = 0
 
     private var isFinished: Bool { pendingIDs.isEmpty || currentIndex >= pendingIDs.count }
@@ -47,6 +49,9 @@ struct GlobalReviewView: View {
         .animation(.easeInOut(duration: 0.3), value: isFinished)
         .sheet(isPresented: $showTrash) {
             TrashView().environment(vm).environment(lm)
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView().environment(subManager).environment(lm)
         }
         .onAppear {
             pendingIDs = vm.allPendingIDs
@@ -317,6 +322,9 @@ struct GlobalReviewView: View {
 
     private func handleSwipe(_ direction: SwipeDirection) {
         guard currentIndex < pendingIDs.count else { return }
+        if direction != .skip && subManager.hasReachedDailyLimit {
+            showPaywall = true; return
+        }
         let photoID = pendingIDs[currentIndex]
         let decision: PhotoDecision
         switch direction {
@@ -326,6 +334,7 @@ struct GlobalReviewView: View {
         case .none:   return
         }
         vm.applyDecisionGlobal(decision, to: photoID)
+        if decision != .skip { subManager.recordSwipe() }
         sessionDecisions[photoID] = decision
         decisionHistory.append((id: photoID, decision: decision))
         vm.startCaching(ids: Array(pendingIDs.dropFirst(currentIndex + 1).prefix(8)),

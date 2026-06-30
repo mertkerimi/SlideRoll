@@ -44,8 +44,10 @@ final class AdManager: NSObject {
     /// Presents an interstitial only when it's appropriate: an ad is loaded, the
     /// launch grace has passed, and the cooldown since the last ad has elapsed.
     /// Call this at natural break points; the policy keeps it non-intrusive.
+    var isPremium = false
+
     func maybeShow(from vc: UIViewController? = nil) {
-        guard isReady else { return }
+        guard isReady, !isPremium else { return }
         let now = Date()
         guard now.timeIntervalSince(appStart) >= launchGrace else { return }
         if let last = lastShownAt, now.timeIntervalSince(last) < cooldown { return }

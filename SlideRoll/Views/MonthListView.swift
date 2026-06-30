@@ -8,6 +8,7 @@ struct MonthListView: View {
     @Environment(PhotoLibraryViewModel.self) var vm
     @Environment(LanguageManager.self) var lm
     @Environment(AdManager.self) var adManager
+    @Environment(SubscriptionManager.self) var subManager
     @State private var showTrash = false
     @State private var showShuffle = false
     @State private var navPath: [YearGroup] = []
@@ -45,16 +46,16 @@ struct MonthListView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: YearGroup.self) { year in
-                MonthsForYearView(year: year).environment(vm).environment(lm).environment(adManager)
+                MonthsForYearView(year: year).environment(vm).environment(lm).environment(adManager).environment(subManager)
             }
             .sheet(isPresented: $showTrash) {
                 TrashView().environment(vm).environment(lm)
             }
             .sheet(item: $resumeGroup) { group in
-                ReviewView(group: group).environment(vm).environment(lm).environment(adManager)
+                ReviewView(group: group).environment(vm).environment(lm).environment(adManager).environment(subManager)
             }
             .fullScreenCover(isPresented: $showShuffle) {
-                GlobalReviewView().environment(vm).environment(lm).environment(adManager)
+                GlobalReviewView().environment(vm).environment(lm).environment(adManager).environment(subManager)
             }
             .onReceive(NotificationCenter.default.publisher(for: .tourNavigateToFirstYear)) { _ in
                 if let firstYear = vm.yearGroups.first {
@@ -488,6 +489,7 @@ struct MonthsForYearView: View {
     @Environment(PhotoLibraryViewModel.self) var vm
     @Environment(LanguageManager.self) var lm
     @Environment(AdManager.self) var adManager
+    @Environment(SubscriptionManager.self) var subManager
     @State private var selectedGroup: MonthGroup?
     @State private var showTrash = false
 
@@ -529,7 +531,7 @@ struct MonthsForYearView: View {
         .navigationTitle(year.title)
         .navigationBarTitleDisplayMode(.large)
         .sheet(item: $selectedGroup) { group in
-            ReviewView(group: group).environment(vm).environment(lm).environment(adManager)
+            ReviewView(group: group).environment(vm).environment(lm).environment(adManager).environment(subManager)
         }
         .sheet(isPresented: $showTrash) {
             TrashView().environment(vm).environment(lm)
