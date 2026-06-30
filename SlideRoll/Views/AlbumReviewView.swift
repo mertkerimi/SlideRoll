@@ -287,7 +287,7 @@ struct AlbumReviewView: View {
                         .foregroundStyle(Theme.green)
                 }
                 VStack(spacing: 10) {
-                    Text(s.monthCompleted)
+                    Text(s.albumCompleted)
                         .font(.system(size: 26, weight: .bold))
                         .foregroundStyle(Theme.textPrimary)
                     Text(s.photosReviewedCount(keepCount + deleteCount))
@@ -394,24 +394,30 @@ struct AlbumReviewView: View {
     // MARK: - Data Loading
 
     private func loadAssets() {
-        let opts = PHFetchOptions()
-        opts.predicate = NSPredicate(format: "mediaType == %d OR mediaType == %d",
-                                     PHAssetMediaType.image.rawValue,
-                                     PHAssetMediaType.video.rawValue)
-        opts.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-        let result = PHAsset.fetchAssets(in: album.collection, options: opts)
-        var ids: [String] = []
-        result.enumerateObjects { asset, _, _ in ids.append(asset.localIdentifier) }
-        allPhotoIDs = ids
-        setupPending(from: ids)
+        let collection = album.collection
+        Task {
+            // PHAsset fetch off main thread — this is what causes the freeze on tap
+            let ids = await Task.detached(priority: .userInitiated) { () -> [String] in
+                let opts = PHFetchOptions()
+                opts.predicate = NSPredicate(format: "mediaType == %d OR mediaType == %d",
+                                             PHAssetMediaType.image.rawValue,
+                                             PHAssetMediaType.video.rawValue)
+                opts.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+                let result = PHAsset.fetchAssets(in: collection, options: opts)
+                var ids: [String] = []
+                result.enumerateObjects { asset, _, _ in ids.append(asset.localIdentifier) }
+                return ids
+            }.value
+
+            allPhotoIDs = ids
+            setupPending(from: ids)
+        }
     }
 
     private func setupPending(from ids: [String]) {
         let allDecisions = vm.monthGroups.reduce(into: [String: PhotoDecision]()) { acc, g in
             for (id, d) in g.decisions { acc[id] = d }
         }
-        let liveIDs = Set(vm.monthGroups.flatMap { $0.photoIDs })
-        // Restore keep/delete decisions so counters and progress survive re-entry
         var restored: [String: PhotoDecision] = [:]
         for id in ids {
             if let d = allDecisions[id], d == .keep || d == .delete {
@@ -419,13 +425,24 @@ struct AlbumReviewView: View {
             }
         }
         localDecisions = restored
-        // Queue undecided and skipped — skip photos are re-shown, keep/delete are not
-        // Exclude permanently deleted photos (no longer present in any monthGroup)
-        pendingIDs = ids.filter {
-            guard liveIDs.contains($0) else { return false }
-            let d = allDecisions[$0]
-            return d == nil || d == .undecided || d == .skip
+
+        if album.kind == .shared {
+            // Shared album photos aren't in monthGroups — skip the liveIDs filter,
+            // just exclude photos already decided keep/delete
+            pendingIDs = ids.filter {
+                let d = allDecisions[$0]
+                return d == nil || d == .undecided || d == .skip
+            }
+        } else {
+            // For smart/user albums: exclude permanently deleted photos
+            let liveIDs = Set(vm.monthGroups.flatMap { $0.photoIDs })
+            pendingIDs = ids.filter {
+                guard liveIDs.contains($0) else { return false }
+                let d = allDecisions[$0]
+                return d == nil || d == .undecided || d == .skip
+            }
         }
+
         currentIndex = 0
         decisionHistory = []
         cardID = UUID()
