@@ -14,6 +14,7 @@ final class SubscriptionManager {
     var products: [Product] = []
     var purchasedProductIDs: Set<String> = []
     var isLoadingProducts = false
+    var productLoadFailed = false
     var isPurchasing = false
     var dailySwipeCount: Int = 0
 
@@ -34,14 +35,17 @@ final class SubscriptionManager {
 
     func loadProducts() async {
         isLoadingProducts = true
+        productLoadFailed = false
         defer { isLoadingProducts = false }
         do {
             let loaded = try await Product.products(for: Self.productIDs)
             products = loaded.sorted {
                 (Self.productIDs.firstIndex(of: $0.id) ?? 0) < (Self.productIDs.firstIndex(of: $1.id) ?? 0)
             }
+            productLoadFailed = products.isEmpty
         } catch {
             print("StoreKit product load error: \(error)")
+            productLoadFailed = true
         }
         await updatePurchasedProducts()
     }
