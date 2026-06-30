@@ -12,6 +12,7 @@
 		E074B5BF2FDB29BA00650DD6 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E074B5BE2FDB29BA00650DD6 /* SwiftUI.framework */; };
 		E074B5CA2FDB29BC00650DD6 /* SlideRollWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E074B5BA2FDB29BA00650DD6 /* SlideRollWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		E086EE082FF33A2B00D229E1 /* Products.storekit in Resources */ = {isa = PBXBuildFile; fileRef = E086EE072FF33A2B00D229E1 /* Products.storekit */; };
+		E086EE0A2FF463EA00D229E1 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E086EE092FF463EA00D229E1 /* StoreKit.framework */; };
 		E0SHARED01AABBCC00112233 /* ColorTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0SHARED00AABBCC00112233 /* ColorTheme.swift */; };
 /* End PBXBuildFile section */
 
@@ -45,6 +46,7 @@
 		E074B5BE2FDB29BA00650DD6 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		E074B5D12FDB2A6400650DD6 /* SlideRollWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SlideRollWidgetExtension.entitlements; sourceTree = "<group>"; };
 		E086EE072FF33A2B00D229E1 /* Products.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Products.storekit; sourceTree = "<group>"; };
+		E086EE092FF463EA00D229E1 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		E0BE94192FD06C2F002A1CC6 /* SlideRoll.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SlideRoll.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E0SHARED00AABBCC00112233 /* ColorTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ColorTheme.swift; path = SlideRoll/ColorTheme.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -100,6 +102,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E025B4B82FDAECA7007926F0 /* GoogleMobileAds in Frameworks */,
+				E086EE0A2FF463EA00D229E1 /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -117,6 +120,7 @@
 		E074B5BB2FDB29BA00650DD6 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				E086EE092FF463EA00D229E1 /* StoreKit.framework */,
 				E074B5BC2FDB29BA00650DD6 /* WidgetKit.framework */,
 				E074B5BE2FDB29BA00650DD6 /* SwiftUI.framework */,
 			);
@@ -471,7 +475,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = SlideRoll/SlideRoll.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = TU72NFPK84;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -504,7 +508,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = SlideRoll/SlideRoll.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = TU72NFPK84;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;

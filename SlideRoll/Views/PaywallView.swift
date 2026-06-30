@@ -187,6 +187,26 @@ struct PaywallView: View {
         VStack(spacing: 8) {
             if subManager.isLoadingProducts {
                 ProgressView().tint(Theme.accent).padding()
+            } else if subManager.productLoadFailed || subManager.products.isEmpty {
+                VStack(spacing: 10) {
+                    Image(systemName: "wifi.exclamationmark")
+                        .font(.system(size: 28))
+                        .foregroundStyle(Theme.textTertiary)
+                    Text(isTR ? "Ürünler yüklenemedi" : "Couldn't load products")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Theme.textSecondary)
+                    Button {
+                        Task { await subManager.loadProducts() }
+                    } label: {
+                        Text(isTR ? "Yeniden Dene" : "Retry")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 8)
+                            .background(Theme.accent, in: Capsule())
+                    }
+                }
+                .padding(.vertical, 12)
             } else {
                 ForEach(subManager.products, id: \.id) { product in
                     planCard(product)
@@ -317,7 +337,7 @@ struct PaywallView: View {
             .background(Theme.accentGradient, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .shadow(color: Theme.accent.opacity(0.4), radius: 16, y: 8)
         }
-        .disabled(subManager.isPurchasing || subManager.isLoadingProducts)
+        .disabled(subManager.isPurchasing || subManager.isLoadingProducts || selectedProduct == nil)
     }
 
     // MARK: - Trial Timeline
