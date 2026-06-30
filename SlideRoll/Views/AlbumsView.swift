@@ -354,30 +354,30 @@ struct AlbumsView: View {
         ScrollView(showsIndicators: false) {
             MasonryLayout(columns: 3, spacing: 5) {
                 ForEach(displayedAlbums, id: \.element.id) { pair in
-                    Group {
-                        if subManager.isPremium {
-                            NavigationLink(destination: AlbumReviewView(album: pair.element)
-                                .environment(vm)
-                                .environment(lm)) {
-                                AlbumTile(
-                                    album: pair.element,
-                                    height: tileHeights[pair.offset % tileHeights.count],
-                                    animationDelay: Double(pair.offset) * 0.05
-                                )
-                            }
-                        } else {
-                            Button { showPaywall = true } label: {
-                                AlbumTile(
-                                    album: pair.element,
-                                    height: tileHeights[pair.offset % tileHeights.count],
-                                    animationDelay: Double(pair.offset) * 0.05
-                                )
-                            }
+                Group {
+                    if subManager.isPremium {
+                        NavigationLink(destination: AlbumReviewView(album: pair.element)
+                            .environment(vm)
+                            .environment(lm)) {
+                            AlbumTile(
+                                album: pair.element,
+                                height: tileHeights[pair.offset % tileHeights.count],
+                                animationDelay: Double(pair.offset) * 0.05
+                            )
+                        }
+                    } else {
+                        Button { showPaywall = true } label: {
+                            AlbumTile(
+                                album: pair.element,
+                                height: tileHeights[pair.offset % tileHeights.count],
+                                animationDelay: Double(pair.offset) * 0.05
+                            )
                         }
                     }
-                    .buttonStyle(AlbumTilePress())
                 }
+                .buttonStyle(AlbumTilePress())
             }
+        }
             .padding(.horizontal, 5)
             .padding(.top, 8)
             .padding(.bottom, 120)
