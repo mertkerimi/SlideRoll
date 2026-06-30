@@ -284,8 +284,10 @@ extension View {
 struct AlbumsView: View {
     @Environment(LanguageManager.self) var lm
     @Environment(PhotoLibraryViewModel.self) var vm
+    @Environment(SubscriptionManager.self) var subManager
     @State private var albumsVM = AlbumsViewModel()
     @State private var showPicker = false
+    @State private var showPaywall = false
 
     @AppStorage("pinnedAlbumIDs") private var pinnedRaw: String = ""
 
@@ -340,6 +342,9 @@ struct AlbumsView: View {
                              pinnedRaw: $pinnedRaw)
                 .environment(lm)
         }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView().environment(subManager).environment(lm)
+        }
         .task { await albumsVM.load(strings: lm.s) }
     }
 
@@ -349,14 +354,26 @@ struct AlbumsView: View {
         ScrollView(showsIndicators: false) {
             MasonryLayout(columns: 3, spacing: 5) {
                 ForEach(displayedAlbums, id: \.element.id) { pair in
-                    NavigationLink(destination: AlbumReviewView(album: pair.element)
-                        .environment(vm)
-                        .environment(lm)) {
-                        AlbumTile(
-                            album: pair.element,
-                            height: tileHeights[pair.offset % tileHeights.count],
-                            animationDelay: Double(pair.offset) * 0.05
-                        )
+                    Group {
+                        if subManager.isPremium {
+                            NavigationLink(destination: AlbumReviewView(album: pair.element)
+                                .environment(vm)
+                                .environment(lm)) {
+                                AlbumTile(
+                                    album: pair.element,
+                                    height: tileHeights[pair.offset % tileHeights.count],
+                                    animationDelay: Double(pair.offset) * 0.05
+                                )
+                            }
+                        } else {
+                            Button { showPaywall = true } label: {
+                                AlbumTile(
+                                    album: pair.element,
+                                    height: tileHeights[pair.offset % tileHeights.count],
+                                    animationDelay: Double(pair.offset) * 0.05
+                                )
+                            }
+                        }
                     }
                     .buttonStyle(AlbumTilePress())
                 }

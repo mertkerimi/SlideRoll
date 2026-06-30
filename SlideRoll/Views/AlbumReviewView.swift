@@ -7,6 +7,7 @@ struct AlbumReviewView: View {
     @Environment(PhotoLibraryViewModel.self) var vm
     @Environment(LanguageManager.self) var lm
     @Environment(AdManager.self) var adManager
+    @Environment(SubscriptionManager.self) var subManager
     @Environment(\.dismiss) var dismiss
 
     @State private var allPhotoIDs: [String] = []
@@ -21,6 +22,7 @@ struct AlbumReviewView: View {
     @AppStorage("hasSeenReviewTutorial") private var hasSeenReviewTutorial = false
     @State private var showTutorial = false
     @State private var showTrash = false
+    @State private var showPaywall = false
 
     private var isFinished: Bool { pendingIDs.isEmpty || currentIndex >= pendingIDs.count }
 
@@ -56,6 +58,9 @@ struct AlbumReviewView: View {
         .animation(.easeInOut(duration: 0.3), value: isFinished)
         .sheet(isPresented: $showTrash) {
             TrashView().environment(vm).environment(lm)
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView().environment(subManager).environment(lm)
         }
         .onAppear {
             NotificationCenter.default.post(name: .hideTabBar, object: nil)
@@ -431,6 +436,9 @@ struct AlbumReviewView: View {
 
     private func handleSwipe(_ direction: SwipeDirection) {
         guard currentIndex < pendingIDs.count else { return }
+        if direction != .skip && subManager.hasReachedDailyLimit {
+            showPaywall = true; return
+        }
         let photoID = pendingIDs[currentIndex]
         let decision: PhotoDecision
         switch direction {
@@ -440,6 +448,7 @@ struct AlbumReviewView: View {
         case .none:   return
         }
         vm.applyDecisionGlobal(decision, to: photoID)
+        if decision != .skip { subManager.recordSwipe() }
         localDecisions[photoID] = decision
         if decision == .delete {
             var map = vm.photoAlbumMap
