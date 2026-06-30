@@ -8,6 +8,7 @@ struct RootView: View {
     @Environment(PhotoLibraryViewModel.self) var vm
     @Environment(LanguageManager.self) var lm
     @Environment(NotificationManager.self) var notif
+    @Environment(SubscriptionManager.self) var subManager
 
     @State private var selectedTab: AppTab = .home
     @AppStorage("hasSeenAppTour") private var hasSeenAppTour = false
@@ -118,10 +119,10 @@ struct RootView: View {
 
     private var floatingTabBar: some View {
         HStack(spacing: 0) {
-            tabItem(icon: "photo.stack.fill",  label: lm.s.tabHome,     tab: .home)
-            tabItem(icon: "rectangle.stack.fill", label: lm.s.tabAlbums, tab: .albums)
-            tabItem(icon: "chart.bar.fill",    label: lm.s.tabStats,    tab: .stats)
-            tabItem(icon: "gearshape.fill",    label: lm.s.tabSettings, tab: .settings)
+            tabItem(icon: "photo.stack.fill",     label: lm.s.tabHome,     tab: .home)
+            tabItem(icon: "rectangle.stack.fill", label: lm.s.tabAlbums,   tab: .albums,   showCrown: true)
+            tabItem(icon: "chart.bar.fill",       label: lm.s.tabStats,    tab: .stats,    showCrown: true)
+            tabItem(icon: "gearshape.fill",       label: lm.s.tabSettings, tab: .settings)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 7)
@@ -154,7 +155,7 @@ struct RootView: View {
         .padding(.horizontal, 40)
     }
 
-    private func tabItem(icon: String, label: String, tab: AppTab) -> some View {
+    private func tabItem(icon: String, label: String, tab: AppTab, showCrown: Bool = false) -> some View {
         let isSelected = selectedTab == tab
         return Button {
             withAnimation(.smooth(duration: 0.35)) {
@@ -175,6 +176,13 @@ struct RootView: View {
                         .foregroundStyle(isSelected ? .white : Theme.textTertiary)
                         .scaleEffect(isSelected ? 1.05 : 1.0)
                         .animation(.smooth(duration: 0.3), value: isSelected)
+
+                    if showCrown {
+                        Image(systemName: "crown.fill")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(subManager.isPremium ? .yellow : Theme.textTertiary)
+                            .offset(x: 18, y: -10)
+                    }
                 }
                 .frame(width: 52, height: 32)
 
