@@ -5,10 +5,11 @@ struct StatsView: View {
     @Environment(LanguageManager.self) var lm
     @Environment(SubscriptionManager.self) var subManager
 
+    @State private var selectedLargest: IdentifiablePhoto? = nil
     @State private var showDuplicates = false
     @State private var showPaywall = false
-    @State private var selectedLargest: IdentifiablePhoto? = nil
     @State private var mediaTab = 0
+
     var body: some View {
         ZStack {
             Theme.bg.ignoresSafeArea()
@@ -33,6 +34,10 @@ struct StatsView: View {
     private var content: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 16) {
+                duplicateFinderCard
+
+                summaryCard
+
                 // Media count cards — appear instantly (Phase 1)
                 HStack(spacing: 12) {
                     mediaCard(icon: "photo.fill", iconColor: Theme.accent,
@@ -47,16 +52,12 @@ struct StatsView: View {
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }
 
-                // Year chart + progress — appear when fully done
+                // Year chart — appears when stats computation finishes
                 if !vm.statsLoading {
                     if !vm.yearlyStorage.isEmpty {
                         yearChartCard
                             .transition(.opacity.combined(with: .move(edge: .bottom)))
                     }
-                    duplicateFinderCard
-                        .transition(.opacity.combined(with: .move(edge: .bottom)))
-                    summaryCard
-                        .transition(.opacity.combined(with: .move(edge: .bottom)))
                 } else {
                     HStack(spacing: 8) {
                         ProgressView().tint(Theme.accent).scaleEffect(0.75)
@@ -235,48 +236,84 @@ struct StatsView: View {
     private var duplicateFinderCard: some View {
         let isTR = lm.selected == .turkish
         return Button {
-            if subManager.isPremium {
-                showDuplicates = true
-            } else {
-                showPaywall = true
-            }
+            if subManager.isPremium { showDuplicates = true }
+            else { showPaywall = true }
         } label: {
             HStack(spacing: 14) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(Theme.accent.opacity(0.15))
-                        .frame(width: 44, height: 44)
+                        .frame(width: 46, height: 46)
                     Image(systemName: "doc.on.doc.fill")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 20, weight: .semibold))
                         .foregroundStyle(Theme.accentGradient)
                 }
                 VStack(alignment: .leading, spacing: 3) {
                     Text(lm.s.dupTitle)
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(Theme.textPrimary)
-                    Text(isTR ? "Benzer fotoğrafları bul ve temizle" : "Find and clean similar photos")
+                    Text(isTR ? "Benzer fotoğrafları bul ve temizle" : "Find and remove similar photos")
                         .font(.system(size: 12))
                         .foregroundStyle(Theme.textSecondary)
                 }
                 Spacer()
-                if !subManager.isPremium {
-                    Image(systemName: "crown.fill")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(Theme.accent)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 5)
-                        .background(Theme.accent.opacity(0.12), in: Capsule())
+                if subManager.isPremium {
+                    HStack(spacing: 4) {
+                        Image(systemName: "crown.fill")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(
+                                LinearGradient(colors: [.yellow, .orange], startPoint: .top, endPoint: .bottom)
+                            )
+                        Text("Premium")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(
+                                LinearGradient(colors: [.yellow, .orange], startPoint: .top, endPoint: .bottom)
+                            )
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(
+                        Capsule()
+                            .fill(LinearGradient(colors: [.yellow.opacity(0.18), .orange.opacity(0.10)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    )
+                    .overlay(
+                        Capsule()
+                            .stroke(
+                                LinearGradient(colors: [.yellow, .orange.opacity(0.5)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                                lineWidth: 1
+                            )
+                    )
+                    .shadow(color: .yellow.opacity(0.5), radius: 8, x: 0, y: 2)
+                    .shadow(color: .orange.opacity(0.3), radius: 4, x: 0, y: 1)
                 } else {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Theme.textTertiary)
+                    HStack(spacing: 4) {
+                        Image(systemName: "crown.fill")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(Theme.textTertiary)
+                        Text("Premium")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Theme.textTertiary)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Theme.textTertiary.opacity(0.08), in: Capsule())
+                    .overlay(Capsule().stroke(Theme.textTertiary.opacity(0.2), lineWidth: 1))
                 }
             }
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Theme.surface)
-                    .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Theme.border, lineWidth: 1))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(
+                                subManager.isPremium
+                                    ? LinearGradient(colors: [.yellow.opacity(0.45), .orange.opacity(0.2), .yellow.opacity(0.12)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                                    : LinearGradient(colors: [Theme.border, Theme.border], startPoint: .top, endPoint: .bottom),
+                                lineWidth: 1
+                            )
+                    )
             )
+            .shadow(color: subManager.isPremium ? .yellow.opacity(0.1) : .clear, radius: 12, x: 0, y: 3)
         }
         .buttonStyle(.plain)
     }
