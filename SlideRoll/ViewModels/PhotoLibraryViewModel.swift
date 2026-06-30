@@ -132,6 +132,32 @@ class PhotoLibraryViewModel {
         (resource.value(forKey: "fileSize") as? Int64) ?? 0
     }
 
+    // dHash: resize to 9×8, compare each pixel to its right neighbor → 64-bit hash.
+    // Much more robust than aHash for distinguishing dark/similar-colored unrelated photos.
+    nonisolated static func averageHash(_ image: UIImage) -> UInt64? {
+        guard let cgImage = image.cgImage else { return nil }
+        let w = 9, h = 8
+        var pixels = [UInt8](repeating: 0, count: w * h)
+        guard let ctx = CGContext(data: &pixels, width: w, height: h,
+                                  bitsPerComponent: 8, bytesPerRow: w,
+                                  space: CGColorSpaceCreateDeviceGray(),
+                                  bitmapInfo: CGImageAlphaInfo.none.rawValue) else { return nil }
+        ctx.draw(cgImage, in: CGRect(x: 0, y: 0, width: w, height: h))
+        var hash: UInt64 = 0
+        for row in 0..<8 {
+            for col in 0..<8 {
+                if pixels[row * 9 + col] < pixels[row * 9 + col + 1] {
+                    hash |= (UInt64(1) << (row * 8 + col))
+                }
+            }
+        }
+        return hash
+    }
+
+    nonisolated static func hammingDistance(_ a: UInt64, _ b: UInt64) -> Int {
+        (a ^ b).nonzeroBitCount
+    }
+
     init() {
         authStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
     }
@@ -261,7 +287,9 @@ class PhotoLibraryViewModel {
         }.sorted { $0.id > $1.id }
     }
 
-    func asset(for id: String) -> PHAsset? { allAssets[id] }
+    func asset(for id: String) -> PHAsset? {
+        allAssets[id] ?? PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil).firstObject
+    }
 
     func isVideo(for id: String) -> Bool {
         allAssets[id]?.mediaType == .video
@@ -539,7 +567,8 @@ class PhotoLibraryViewModel {
     // Returns the full-quality image, skipping degraded intermediate delivery.
     // Falls back to the degraded version after 10s so slow iCloud downloads never hang.
     func loadImage(for id: String, targetSize: CGSize) async -> UIImage? {
-        guard let asset = allAssets[id] else { return nil }
+        let asset = allAssets[id] ?? PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil).firstObject
+        guard let asset else { return nil }
         return await withCheckedContinuation { continuation in
             let options = PHImageRequestOptions()
             options.isNetworkAccessAllowed = true
@@ -574,8 +603,8 @@ class PhotoLibraryViewModel {
     func loadLibraryStats() async {
         guard !statsLoading && !statsLoaded else { return }
         statsLoading = true
+        await Task.yield() // flush any pending UI state before starting
 
-        // Phase 1: instant counts — PHFetchResult.count requires no enumeration
         let photoFetch = PHAsset.fetchAssets(with: .image, options: nil)
         let videoFetch = PHAsset.fetchAssets(with: .video, options: nil)
         withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
@@ -583,14 +612,80 @@ class PhotoLibraryViewModel {
             videoCount = videoFetch.count
         }
 
-        // Phase 2: streaming enumeration — update top-5 + totals every 200 assets
-        await Task.detached(priority: .userInitiated) {
+        // Fire-and-forget — caller returns immediately, results stream via MainActor
+        Task.detached(priority: .userInitiated) {
+            let hashMgr = PHImageManager()
+            let hOpts = PHImageRequestOptions()
+            hOpts.deliveryMode = .fastFormat
+            hOpts.resizeMode   = .fast
+            hOpts.isSynchronous = true
+            hOpts.isNetworkAccessAllowed = false
+            let monthFmt = DateFormatter(); monthFmt.dateFormat = "yyyy-MM"
+
+            // Helper: hash + compare a batch of assets, stream any groups found
+            func scanBatch(_ assets: [PHAsset], seen: inout Set<String>, seenKeys: inout Set<String>) {
+                var byMonth: [String: [PHAsset]] = [:]
+                for asset in assets {
+                    let m = monthFmt.string(from: asset.creationDate ?? Date.distantPast)
+                    byMonth[m, default: []].append(asset)
+                }
+                for month in byMonth.keys.sorted().reversed() {
+                    var hashes: [(id: String, hash: UInt64)] = []
+                    for asset in byMonth[month] ?? [] {
+                        guard !seen.contains(asset.localIdentifier) else { continue }
+                        var img: UIImage?
+                        hashMgr.requestImage(for: asset,
+                                             targetSize: CGSize(width: 9, height: 8),
+                                             contentMode: .aspectFill,
+                                             options: hOpts) { i, _ in img = i }
+                        if let img, let h = Self.averageHash(img) {
+                            hashes.append((id: asset.localIdentifier, hash: h))
+                        }
+                    }
+                    var buckets: [[String]] = []
+                    for i in 0..<hashes.count {
+                        guard !seen.contains(hashes[i].id) else { continue }
+                        var group = [hashes[i].id]
+                        for j in (i + 1)..<hashes.count {
+                            guard !seen.contains(hashes[j].id) else { continue }
+                            if Self.hammingDistance(hashes[i].hash, hashes[j].hash) <= 6 {
+                                group.append(hashes[j].id)
+                            }
+                        }
+                        if group.count >= 2 {
+                            group.forEach { seen.insert($0) }
+                            buckets.append(group)
+                        }
+                    }
+                    if !buckets.isEmpty {
+                        let toAdd = buckets
+                        Task { @MainActor in
+                            let existing = Set(self.duplicateGroups.map { $0.sorted().joined(separator: ",") })
+                            for ids in toAdd where !existing.contains(ids.sorted().joined(separator: ",")) {
+                                self.duplicateGroups.append(ids)
+                            }
+                        }
+                        for ids in buckets { seenKeys.insert(ids.sorted().joined(separator: ",")) }
+                    }
+                }
+            }
+
+            // FAST PATH: hash the most recent 500 photos immediately (no enumeration wait)
+            let quickCount = min(500, photoFetch.count)
+            var quickAssets: [PHAsset] = []
+            for i in 0..<quickCount { quickAssets.append(photoFetch.object(at: i)) }
+            var visualSeen = Set<String>()
+            var seenKeys   = Set<String>()
+            scanBatch(quickAssets, seen: &visualSeen, seenKeys: &seenKeys)
+
+            // FULL ENUMERATION: metadata stats + remaining photos
             var pBytes: Int64 = 0
             var vBytes: Int64 = 0
             var yearMap: [String: Int64] = [:]
-            let dayFormatter = DateFormatter(); dayFormatter.dateFormat = "yyyy-MM-dd"
             let yearFormatter = DateFormatter(); yearFormatter.dateFormat = "yyyy"
-            var dayBuckets: [String: [(id: String, size: Int64)]] = [:]
+            var sizeDimBuckets: [String: [String]] = [:]
+            var burstBuckets:   [String: [String]] = [:]
+            var allPhotoAssets: [PHAsset] = []
             var top5Photos: [(id: String, bytes: Int64, date: Date)] = []
             var counter = 0
 
@@ -602,23 +697,48 @@ class PhotoLibraryViewModel {
                 pBytes += size
                 let date = asset.creationDate ?? Date.distantPast
                 yearMap[yearFormatter.string(from: date), default: 0] += size
-                dayBuckets[dayFormatter.string(from: date), default: []].append((id: asset.localIdentifier, size: size))
-
-                // Keep running top-5
-                top5Photos.append((id: asset.localIdentifier, bytes: size, date: date))
+                let dim = "\(asset.pixelWidth)x\(asset.pixelHeight)"
+                let id  = asset.localIdentifier
+                if size > 10_000 { sizeDimBuckets["\(size)_\(dim)", default: []].append(id) }
+                if let burst = asset.burstIdentifier { burstBuckets[burst, default: []].append(id) }
+                allPhotoAssets.append(asset)
+                top5Photos.append((id: id, bytes: size, date: date))
                 if top5Photos.count > 5 {
                     top5Photos.sort { $0.bytes > $1.bytes }
                     top5Photos = Array(top5Photos.prefix(5))
                 }
-
                 counter += 1
                 if counter % 200 == 0 {
-                    let snapshot = top5Photos
-                    let pb = pBytes
+                    let snapshot = top5Photos; let pb = pBytes
                     Task { @MainActor in self.largestPhotos = snapshot; self.photoBytes = pb }
                 }
             }
 
+            // Emit burst + exact-size-dim matches from metadata
+            var fastGroups: [[String]] = []
+            for (_, ids) in sizeDimBuckets where ids.count >= 2 {
+                let key = ids.sorted().joined(separator: ",")
+                if seenKeys.insert(key).inserted { fastGroups.append(ids) }
+            }
+            for (_, ids) in burstBuckets where ids.count >= 2 {
+                let key = ids.sorted().joined(separator: ",")
+                if seenKeys.insert(key).inserted { fastGroups.append(ids) }
+            }
+            if !fastGroups.isEmpty {
+                let fg = fastGroups
+                Task { @MainActor in
+                    let existing = Set(self.duplicateGroups.map { $0.sorted().joined(separator: ",") })
+                    for ids in fg where !existing.contains(ids.sorted().joined(separator: ",")) {
+                        self.duplicateGroups.append(ids)
+                    }
+                }
+            }
+
+            // Hash remaining photos (501 onward) month-by-month
+            let remaining = Array(allPhotoAssets.dropFirst(quickCount).prefix(2500))
+            scanBatch(remaining, seen: &visualSeen, seenKeys: &seenKeys)
+
+            // Video enumeration
             var top5Videos: [(id: String, bytes: Int64, date: Date, duration: TimeInterval)] = []
             var vCounter = 0
             videoFetch.enumerateObjects { asset, _, _ in
@@ -629,47 +749,40 @@ class PhotoLibraryViewModel {
                 vBytes += size
                 let date = asset.creationDate ?? Date.distantPast
                 yearMap[yearFormatter.string(from: date), default: 0] += size
-
                 top5Videos.append((id: asset.localIdentifier, bytes: size, date: date, duration: asset.duration))
                 if top5Videos.count > 5 {
                     top5Videos.sort { $0.bytes > $1.bytes }
                     top5Videos = Array(top5Videos.prefix(5))
                 }
-
                 vCounter += 1
                 if vCounter % 100 == 0 {
-                    let snapshot = top5Videos
-                    let vb = vBytes
+                    let snapshot = top5Videos; let vb = vBytes
                     Task { @MainActor in self.largestVideos = snapshot; self.videoBytes = vb }
                 }
             }
 
-            // Final results
-            var dupGroups: [[String]] = []
-            for (_, items) in dayBuckets {
-                var sizeMap: [Int64: [String]] = [:]
-                for item in items { sizeMap[item.size, default: []].append(item.id) }
-                for (_, ids) in sizeMap where ids.count >= 2 { dupGroups.append(ids) }
-            }
             let yearly = yearMap.map { (year: $0.key, bytes: $0.value) }.sorted { $0.year > $1.year }
             let finalPhotos = top5Photos.sorted { $0.bytes > $1.bytes }
             let finalVideos = top5Videos.sorted { $0.bytes > $1.bytes }
-
+            let finalVB = vBytes
             Task { @MainActor in
-                self.photoBytes      = pBytes
-                self.videoBytes      = vBytes
-                self.duplicateGroups = dupGroups
-                self.yearlyStorage   = yearly
-                self.largestPhotos   = finalPhotos
-                self.largestVideos   = finalVideos
-                self.statsLoading    = false
-                self.statsLoaded     = true
+                self.photoBytes    = pBytes
+                self.videoBytes    = finalVB
+                self.yearlyStorage = yearly
+                self.largestPhotos = finalPhotos
+                self.largestVideos = finalVideos
+                self.statsLoading  = false
+                self.statsLoaded   = true
             }
-        }.value
+        }
+        // Returns immediately — scan streams results in background
     }
 
     func startCaching(ids: [String], targetSize: CGSize) {
-        let assets = ids.compactMap { allAssets[$0] }
+        let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: ids.filter { allAssets[$0] == nil }, options: nil)
+        var extra: [PHAsset] = []
+        fetchResult.enumerateObjects { a, _, _ in extra.append(a) }
+        let assets = ids.compactMap { allAssets[$0] } + extra
         let options = PHImageRequestOptions()
         options.isNetworkAccessAllowed = true
         options.deliveryMode = .highQualityFormat

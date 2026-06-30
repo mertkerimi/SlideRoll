@@ -87,82 +87,96 @@ final class AlbumsViewModel {
     var isLoading = true
     private let imageManager = PHCachingImageManager()
 
-    func load(strings: Strings) async {
-        var items: [AlbumItem] = []
+    // Survives tab switches — avoids full reload every time user taps Albums
+    private static var cache: [AlbumItem] = []
 
-        // --- Sistem albümleri (kind: .smart) — Recents/UserLibrary kasıtlı hariç ---
-        let smartTypes: [PHAssetCollectionSubtype] = [
-            .smartAlbumSelfPortraits, .smartAlbumScreenshots,
-            .smartAlbumFavorites, .smartAlbumVideos, .smartAlbumBursts,
-            .smartAlbumPanoramas, .smartAlbumSlomoVideos, .smartAlbumTimelapses,
-            .smartAlbumAnimated, .smartAlbumLivePhotos, .smartAlbumDepthEffect,
-            .smartAlbumRecentlyAdded
-        ]
-        for subtype in smartTypes {
-            PHAssetCollection.fetchAssetCollections(with: .smartAlbum, subtype: subtype, options: nil)
+    func load(strings: Strings) async {
+        if !Self.cache.isEmpty {
+            self.albums = Self.cache
+            self.isLoading = false
+            return
+        }
+
+        // Fetch album metadata on a background thread — PHAsset APIs are thread-safe
+        let items: [AlbumItem] = await Task.detached(priority: .userInitiated) { [strings] in
+            var result: [AlbumItem] = []
+
+            let smartTypes: [PHAssetCollectionSubtype] = [
+                .smartAlbumSelfPortraits, .smartAlbumScreenshots,
+                .smartAlbumFavorites, .smartAlbumVideos, .smartAlbumBursts,
+                .smartAlbumPanoramas, .smartAlbumSlomoVideos, .smartAlbumTimelapses,
+                .smartAlbumAnimated, .smartAlbumLivePhotos, .smartAlbumDepthEffect,
+                .smartAlbumRecentlyAdded
+            ]
+            for subtype in smartTypes {
+                PHAssetCollection.fetchAssetCollections(with: .smartAlbum, subtype: subtype, options: nil)
+                    .enumerateObjects { col, _, _ in
+                        let all = PHAsset.fetchAssets(in: col, options: nil)
+                        guard all.count > 0 else { return }
+                        let vo = PHFetchOptions()
+                        vo.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.video.rawValue)
+                        let vids = PHAsset.fetchAssets(in: col, options: vo).count
+                        let title = strings.smartAlbumTitle(subtype) ?? col.localizedTitle ?? ""
+                        var ids: [String] = []
+                        all.enumerateObjects { a, _, _ in ids.append(a.localIdentifier) }
+                        result.append(AlbumItem(id: col.localIdentifier, collection: col,
+                                                title: title,
+                                                photoCount: all.count - vids, videoCount: vids,
+                                                kind: .smart, photoIDs: ids))
+                    }
+            }
+
+            let so = PHFetchOptions()
+            so.sortDescriptors = [NSSortDescriptor(key: "localizedTitle", ascending: true)]
+            PHAssetCollection.fetchAssetCollections(with: .album, subtype: .albumCloudShared, options: so)
                 .enumerateObjects { col, _, _ in
                     let all = PHAsset.fetchAssets(in: col, options: nil)
                     guard all.count > 0 else { return }
                     let vo = PHFetchOptions()
                     vo.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.video.rawValue)
                     let vids = PHAsset.fetchAssets(in: col, options: vo).count
-                    let title = strings.smartAlbumTitle(subtype) ?? col.localizedTitle ?? ""
                     var ids: [String] = []
                     all.enumerateObjects { a, _, _ in ids.append(a.localIdentifier) }
-                    items.append(AlbumItem(id: col.localIdentifier, collection: col,
-                                           title: title,
-                                           photoCount: all.count - vids, videoCount: vids,
-                                           kind: .smart, photoIDs: ids))
+                    result.append(AlbumItem(id: col.localIdentifier, collection: col,
+                                            title: col.localizedTitle ?? "",
+                                            photoCount: all.count - vids, videoCount: vids,
+                                            kind: .shared, photoIDs: ids))
                 }
-        }
 
-        // --- Paylaşılan albümler (kind: .shared) ---
-        let so = PHFetchOptions()
-        so.sortDescriptors = [NSSortDescriptor(key: "localizedTitle", ascending: true)]
-        PHAssetCollection.fetchAssetCollections(with: .album, subtype: .albumCloudShared, options: so)
-            .enumerateObjects { col, _, _ in
-                let all = PHAsset.fetchAssets(in: col, options: nil)
-                guard all.count > 0 else { return }
-                let vo = PHFetchOptions()
-                vo.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.video.rawValue)
-                let vids = PHAsset.fetchAssets(in: col, options: vo).count
-                var ids: [String] = []
-                all.enumerateObjects { a, _, _ in ids.append(a.localIdentifier) }
-                items.append(AlbumItem(id: col.localIdentifier, collection: col,
-                                       title: col.localizedTitle ?? "",
-                                       photoCount: all.count - vids, videoCount: vids,
-                                       kind: .shared, photoIDs: ids))
-            }
+            let fo = PHFetchOptions()
+            fo.sortDescriptors = [NSSortDescriptor(key: "localizedTitle", ascending: true)]
+            PHAssetCollection.fetchAssetCollections(with: .album, subtype: .albumRegular, options: fo)
+                .enumerateObjects { col, _, _ in
+                    let all = PHAsset.fetchAssets(in: col, options: nil)
+                    guard all.count > 0 else { return }
+                    let vo = PHFetchOptions()
+                    vo.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.video.rawValue)
+                    let vids = PHAsset.fetchAssets(in: col, options: vo).count
+                    var ids: [String] = []
+                    all.enumerateObjects { a, _, _ in ids.append(a.localIdentifier) }
+                    result.append(AlbumItem(id: col.localIdentifier, collection: col,
+                                            title: col.localizedTitle ?? "",
+                                            photoCount: all.count - vids, videoCount: vids,
+                                            kind: .user, photoIDs: ids))
+                }
 
-        // --- Kullanıcı albümleri (kind: .user) ---
-        let fo = PHFetchOptions()
-        fo.sortDescriptors = [NSSortDescriptor(key: "localizedTitle", ascending: true)]
-        PHAssetCollection.fetchAssetCollections(with: .album, subtype: .albumRegular, options: fo)
-            .enumerateObjects { col, _, _ in
-                let all = PHAsset.fetchAssets(in: col, options: nil)
-                guard all.count > 0 else { return }
-                let vo = PHFetchOptions()
-                vo.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.video.rawValue)
-                let vids = PHAsset.fetchAssets(in: col, options: vo).count
-                var ids: [String] = []
-                all.enumerateObjects { a, _, _ in ids.append(a.localIdentifier) }
-                items.append(AlbumItem(id: col.localIdentifier, collection: col,
-                                       title: col.localizedTitle ?? "",
-                                       photoCount: all.count - vids, videoCount: vids,
-                                       kind: .user, photoIDs: ids))
-            }
-        // Show grid immediately with color placeholders — no waiting for thumbnails
+            return result
+        }.value
+
+        Self.cache = items
         await MainActor.run { self.albums = items; self.isLoading = false }
 
         // Load thumbnails progressively in background
-        for i in items.indices {
-            if let asset = portraitAsset(in: items[i].collection) {
+        var mutable = items
+        for i in mutable.indices {
+            if let asset = portraitAsset(in: mutable[i].collection) {
                 let thumb = await fetchThumb(asset)
                 if let thumb {
-                    items[i].thumbnail = thumb
-                    items[i].dominantColor = thumb.dominantColor()
+                    mutable[i].thumbnail = thumb
+                    mutable[i].dominantColor = thumb.dominantColor()
                 }
-                let snapshot = items[i]
+                let snapshot = mutable[i]
+                Self.cache = mutable
                 await MainActor.run {
                     if i < self.albums.count { self.albums[i] = snapshot }
                 }
