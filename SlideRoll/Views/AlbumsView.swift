@@ -304,6 +304,7 @@ struct AlbumsView: View {
     @State private var showPaywall = false
 
     @AppStorage("pinnedAlbumIDs") private var pinnedRaw: String = ""
+    @State private var searchText = ""
 
     private let tileHeights: [CGFloat] = [205, 155, 180, 145, 220, 165, 195, 150, 210, 170, 185, 140]
 
@@ -324,7 +325,9 @@ struct AlbumsView: View {
     }
 
     private var displayedAlbums: [(offset: Int, element: AlbumItem)] {
-        Array(albumsWithStats.enumerated()).filter { pinnedIDs.contains($0.element.id) }
+        let pinned = albumsWithStats.filter { pinnedIDs.contains($0.id) }
+        let filtered = searchText.isEmpty ? pinned : pinned.filter { $0.title.localizedCaseInsensitiveContains(searchText) }
+        return Array(filtered.enumerated())
     }
 
     var body: some View {
@@ -359,6 +362,7 @@ struct AlbumsView: View {
         .sheet(isPresented: $showPaywall) {
             PaywallView().environment(subManager).environment(lm)
         }
+        .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .automatic), prompt: lm.selected == .turkish ? "Albüm ara..." : "Search albums...")
         .task { await albumsVM.load(strings: lm.s) }
     }
 
@@ -481,14 +485,20 @@ struct AlbumPickerSheet: View {
     @Binding var pinnedRaw: String
     @Environment(LanguageManager.self) var lm
     @Environment(\.dismiss) private var dismiss
+    @State private var searchText = ""
 
     private var pinnedIDs: Set<String> {
         Set(pinnedRaw.split(separator: ",").map(String.init).filter { !$0.isEmpty })
     }
 
-    private var smartAlbums:  [AlbumItem] { albums.filter { $0.kind == .smart  } }
-    private var sharedAlbums: [AlbumItem] { albums.filter { $0.kind == .shared } }
-    private var userAlbums:   [AlbumItem] { albums.filter { $0.kind == .user   } }
+    private func filtered(_ items: [AlbumItem]) -> [AlbumItem] {
+        guard !searchText.isEmpty else { return items }
+        return items.filter { $0.title.localizedCaseInsensitiveContains(searchText) }
+    }
+
+    private var smartAlbums:  [AlbumItem] { filtered(albums.filter { $0.kind == .smart  }) }
+    private var sharedAlbums: [AlbumItem] { filtered(albums.filter { $0.kind == .shared }) }
+    private var userAlbums:   [AlbumItem] { filtered(albums.filter { $0.kind == .user   }) }
 
     private func toggle(_ id: String) {
         var set = pinnedIDs
@@ -555,6 +565,7 @@ struct AlbumPickerSheet: View {
                     .scrollContentBackground(.hidden)
                 }
             }
+            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: lm.selected == .turkish ? "Albüm ara..." : "Search albums...")
             .navigationTitle(lm.s.albumsSelectedCount(pinnedIDs.count))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

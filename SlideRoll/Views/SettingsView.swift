@@ -6,7 +6,9 @@ struct SettingsView: View {
     @Environment(LanguageManager.self) var lm
     @Environment(NotificationManager.self) var notif
     @Environment(PhotoLibraryViewModel.self) var vm
+    @Environment(SubscriptionManager.self) var subManager
     @Environment(\.openURL) private var openURL
+    @State private var showPaywall = false
 
     @State private var appeared = false
 
@@ -19,6 +21,9 @@ struct SettingsView: View {
                 VStack(spacing: 20) {
                     appHeaderCard
                         .cardEntrance(appeared: appeared, delay: 0.0)
+
+                    subscriptionCard
+                        .cardEntrance(appeared: appeared, delay: 0.05)
 
                     sectionCard(header: lm.s.themeColor) {
                         colorPalette
@@ -76,6 +81,9 @@ struct SettingsView: View {
                 .padding(.bottom, 100)
             }
         }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView().environment(subManager).environment(lm)
+        }
         .task { await notif.refreshStatus() }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
             Task { await notif.refreshStatus() }
@@ -105,6 +113,75 @@ struct SettingsView: View {
         .allowsHitTesting(false)
     }
 
+    // MARK: - Subscription Card
+
+    private var subscriptionCard: some View {
+        let isTR = lm.selected == .turkish
+        return Button { if !subManager.isPremium { showPaywall = true } } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle().fill(subManager.isPremium ? Theme.accent.opacity(0.15) : Theme.surface)
+                        .frame(width: 44, height: 44)
+                    Image(systemName: subManager.isPremium ? "crown.fill" : "crown")
+                        .font(.system(size: 20))
+                        .foregroundStyle(subManager.isPremium ? AnyShapeStyle(Theme.accentGradient) : AnyShapeStyle(Theme.textSecondary))
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(subManager.isPremium ? "Premium" : (isTR ? "Ücretsiz Plan" : "Free Plan"))
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                    if subManager.isPremium {
+                        if let expiry = subManager.subscriptionExpiryDate {
+                            let formatter: DateFormatter = {
+                                let f = DateFormatter()
+                                f.dateStyle = .medium
+                                f.timeStyle = .none
+                                return f
+                            }()
+                            Text((isTR ? "Yenileme: " : "Renews: ") + formatter.string(from: expiry))
+                                .font(.system(size: 12))
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                        if let pid = subManager.activeSubscriptionProductID {
+                            let planName: String = {
+                                switch pid {
+                                case SubscriptionManager.weeklyID:  return isTR ? "Haftalık Plan" : "Weekly Plan"
+                                case SubscriptionManager.monthlyID: return isTR ? "Aylık Plan" : "Monthly Plan"
+                                case SubscriptionManager.yearlyID:  return isTR ? "Yıllık Plan" : "Yearly Plan"
+                                default: return pid
+                                }
+                            }()
+                            Text(planName)
+                                .font(.system(size: 12))
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                    } else {
+                        Text(isTR ? "Premium'a geç" : "Upgrade to Premium")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Theme.accent)
+                    }
+                }
+
+                Spacer()
+
+                if !subManager.isPremium {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Theme.textTertiary)
+                }
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Theme.surface)
+                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(subManager.isPremium ? Theme.accent.opacity(0.3) : Theme.border, lineWidth: subManager.isPremium ? 1.5 : 1))
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: - App Header Card
 
     private var appHeaderCard: some View {
@@ -129,14 +206,6 @@ struct SettingsView: View {
             }
 
             Spacer()
-
-            Text(appVersion)
-                .font(.system(size: 11, weight: .bold, design: .rounded))
-                .foregroundStyle(Theme.accent)
-                .padding(.horizontal, 9)
-                .padding(.vertical, 5)
-                .background(Theme.accent.opacity(0.12), in: Capsule())
-                .overlay(Capsule().strokeBorder(Theme.accent.opacity(0.2), lineWidth: 1))
         }
         .padding(18)
         .background(
@@ -313,17 +382,6 @@ struct SettingsView: View {
         }
         .buttonStyle(.plain)
 
-        Divider().padding(.horizontal, 16)
-
-        settingsRow(
-            icon: "info.circle.fill", iconColor: Theme.accent,
-            title: s.versionLabel,
-            trailing: AnyView(
-                Text(appVersion)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(Theme.textSecondary)
-            )
-        )
     }
 
     // MARK: - Appearance Picker
