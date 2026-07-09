@@ -7,7 +7,7 @@ final class SubscriptionManager {
     static let weeklyID  = "com.mertkerimi.slideroll.weekly"
     static let monthlyID = "com.mertkerimi.slideroll.monthly"
     static let yearlyID  = "com.mertkerimi.slideroll.yearly"
-    static let freeSwipeLimit = 50
+    static let freeSwipeLimit = 200
 
     private static let productIDs = [weeklyID, monthlyID, yearlyID]
 
@@ -17,6 +17,8 @@ final class SubscriptionManager {
     var productLoadFailed = false
     var isPurchasing = false
     var dailySwipeCount: Int = 0
+    var activeSubscriptionProductID: String? = nil
+    var subscriptionExpiryDate: Date? = nil
 
     var isPremium: Bool { !purchasedProductIDs.isEmpty }
 
@@ -114,12 +116,20 @@ final class SubscriptionManager {
 
     private func updatePurchasedProducts() async {
         var purchased: Set<String> = []
+        var latestProductID: String? = nil
+        var latestExpiry: Date? = nil
         for await result in Transaction.currentEntitlements {
             if let t = try? checkVerified(result) {
                 purchased.insert(t.productID)
+                if latestExpiry == nil || (t.expirationDate ?? .distantFuture) > (latestExpiry ?? .distantPast) {
+                    latestProductID = t.productID
+                    latestExpiry = t.expirationDate
+                }
             }
         }
         purchasedProductIDs = purchased
+        activeSubscriptionProductID = latestProductID
+        subscriptionExpiryDate = latestExpiry
     }
 
     private func listenForTransactions() async {
