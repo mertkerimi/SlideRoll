@@ -116,7 +116,7 @@ struct PaywallView: View {
             tableHeader
             Divider().background(Theme.border)
             featureRow(isTR ? "Reklamsız Deneyim"     : "Ad-Free Experience",     free: false, premium: true)
-            featureRow(isTR ? "Günlük Kaydırma Limiti": "Daily Swipe Limit",       freeText: "50", premiumText: "∞")
+            featureRow(isTR ? "Günlük Kaydırma Limiti": "Daily Swipe Limit",       freeText: "200", premiumText: "∞")
             featureRow(isTR ? "Albüm Temizleme"        : "Album Cleaning",          free: false, premium: true)
             featureRow(isTR ? "Duplicate Finder"       : "Duplicate Finder",        free: false, premium: true, isLast: true)
         }
@@ -243,14 +243,11 @@ struct PaywallView: View {
 
                 VStack(alignment: .trailing, spacing: 2) {
                     if isWeekly {
-                        Text(isTR ? "1 hafta ücretsiz" : "1 week free")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Theme.accentGradient, in: Capsule())
-                        Text(isTR ? "sonra " + pricePeriod(product) : "then " + pricePeriod(product))
-                            .font(.system(size: 11, weight: .medium))
+                        Text(pricePeriod(product))
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .foregroundStyle(isSelected ? Theme.accent : Theme.textPrimary)
+                        Text(isTR ? "7 gün ücretsiz deneme" : "7-day free trial")
+                            .font(.system(size: 10, weight: .medium))
                             .foregroundStyle(Theme.textTertiary)
                     } else {
                         Text(product.displayPrice)
@@ -351,8 +348,8 @@ struct PaywallView: View {
                 icon: "checkmark.circle.fill",
                 color: Theme.green,
                 title: isTR ? "Bugün" : "Today",
-                subtitle: isTR ? "Ücretsiz denemeniz başlayacak" : "Your free trial begins",
-                value: isTR ? "1 Hafta Ücretsiz" : "1 Week Free",
+                subtitle: isTR ? "7 günlük ücretsiz denemeniz başlayacak" : "Your 7-day free trial begins",
+                value: isTR ? "Ücretsiz" : "Free",
                 isLast: false
             )
             timelineRow(
@@ -397,13 +394,25 @@ struct PaywallView: View {
     // MARK: - Footer
 
     private var footerNote: some View {
-        Text(isTR
-             ? "Abonelik, dönem sona ermeden 24 saat önce iptal edilmezse otomatik olarak yenilenir. İstediğin zaman App Store ayarlarından iptal edebilirsin."
-             : "Subscription renews automatically unless cancelled at least 24 hours before the end of the period. Cancel anytime in App Store settings.")
-            .font(.system(size: 10))
-            .foregroundStyle(Theme.textTertiary)
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, 8)
+        VStack(spacing: 8) {
+            Text(isTR
+                 ? "Abonelik, dönem sona ermeden 24 saat önce iptal edilmezse otomatik olarak yenilenir. İstediğin zaman App Store ayarlarından iptal edebilirsin."
+                 : "Subscription renews automatically unless cancelled at least 24 hours before the end of the period. Cancel anytime in App Store settings.")
+                .font(.system(size: 11))
+                .foregroundStyle(Theme.textTertiary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 16)
+                .lineSpacing(3)
+
+            HStack(spacing: 20) {
+                Link(isTR ? "Gizlilik Politikası" : "Privacy Policy",
+                     destination: URL(string: "https://mrtkrm.com/slideroll/privacy")!)
+                Link(isTR ? "Kullanım Koşulları" : "Terms of Use",
+                     destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
+            }
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(Theme.accent)
+        }
     }
 
     // MARK: - Background
