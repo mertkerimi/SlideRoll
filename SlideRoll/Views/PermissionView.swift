@@ -53,6 +53,14 @@ struct PermissionView: View {
                 Spacer()
 
                 VStack(spacing: 14) {
+                    Text(lm.s.allowPhotosReason)
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundStyle(Theme.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(3)
+                        .padding(.horizontal, 8)
+                        .padding(.bottom, 4)
+
                     // Primary button
                     Button {
                         Task { await onRequest() }
@@ -70,15 +78,6 @@ struct PermissionView: View {
                         .shadow(color: Theme.accent.opacity(0.45), radius: 20, y: 8)
                     }
 
-                    // Secondary
-                    Button(lm.s.allowInSettings) {
-                        if let url = URL(string: UIApplication.openSettingsURLString) {
-                            UIApplication.shared.open(url)
-                        }
-                    }
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(Theme.textSecondary)
-                    .padding(.vertical, 12)
                 }
                 .padding(.horizontal, 28)
                 .padding(.bottom, 52)
