@@ -301,7 +301,7 @@ struct LargestPhotoDetailView: View {
                 self.isVideoLoading = false
 
                 // Duration
-                let dur = avAsset.duration.seconds
+                let dur = CMTimeGetSeconds(avAsset.duration)
                 self.duration = dur.isNaN ? 0 : dur
 
                 // Periodic time observer

@@ -41,16 +41,16 @@ final class NotificationManager {
 
         let pool = messages(language).shuffled()
 
-        // Tek seferlik bildirimler: giderek seyrekleşen aralıklar
-        let oneTimeHours: [Double] = [5, 10, 18, 30, 48]
+        // Tek seferlik bildirimler: ilk gün yoğun, sonra seyrekleşir
+        let oneTimeHours: [Double] = [1, 3, 6, 12, 24, 48]
         for (i, h) in oneTimeHours.enumerated() {
             let msg = pool[i % pool.count]
             scheduleIn(h * 3600, id: "slideroll.remind.\(i+1)", title: msg.0, body: msg.1, repeats: false)
         }
 
-        // Son bildirim: her 72 saatte bir tekrarlar — kullanıcı uygulamayı açana kadar
+        // Son bildirim: her 48 saatte bir tekrarlar — kullanıcı uygulamayı açana kadar
         let msg = pool[oneTimeHours.count % pool.count]
-        scheduleIn(72 * 3600, id: "slideroll.remind.repeat", title: msg.0, body: msg.1, repeats: true)
+        scheduleIn(48 * 3600, id: "slideroll.remind.repeat", title: msg.0, body: msg.1, repeats: true)
     }
 
     func cancelAll() {

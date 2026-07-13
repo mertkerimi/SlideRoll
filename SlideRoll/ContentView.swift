@@ -36,8 +36,7 @@ struct ContentView: View {
         case .authorized, .limited:
             RootView()
         case .denied, .restricted:
-            PermissionView(onRequest: {})
-                .environment(lm)
+            RootView()
         default:
             PermissionView {
                 await vm.requestPermission()

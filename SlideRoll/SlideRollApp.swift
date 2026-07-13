@@ -58,6 +58,9 @@ struct SlideRollApp: App {
                     // Uygulama açıkken bekleyen bildirimleri iptal et
                     notif.cancelAll()
                 }
+                .onChange(of: subMan.isPremium) { _, isPremium in
+                    adMan.isPremium = isPremium
+                }
                 .onChange(of: scenePhase) { _, phase in
                     switch phase {
                     case .active:
