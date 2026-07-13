@@ -184,7 +184,7 @@ struct PhotoCardView: View {
                 self.player = p
                 self.isPlaying = true
                 self.isVideoLoading = false
-                self.videoDurationSecs = avAsset.duration.seconds
+                self.videoDurationSecs = CMTimeGetSeconds(avAsset.duration)
                 // Loop
                 NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime,
                     object: p.currentItem, queue: .main) { _ in

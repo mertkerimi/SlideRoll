@@ -20,6 +20,10 @@ final class SubscriptionManager {
     var activeSubscriptionProductID: String? = nil
     var subscriptionExpiryDate: Date? = nil
 
+    // Cached expiry survives app restarts — StoreKit verification happens after
+    private static let cachedExpiryKey     = "premiumExpiryCache_v1"
+    private static let cachedProductIDKey  = "premiumProductIDCache_v1"
+
     var isPremium: Bool { !purchasedProductIDs.isEmpty }
 
     var hasReachedDailyLimit: Bool {
@@ -29,8 +33,23 @@ final class SubscriptionManager {
     private var updatesTask: Task<Void, Never>?
 
     init() {
+        restoreCachedPremium()
         loadDailySwipeCount()
         updatesTask = Task { await listenForTransactions() }
+    }
+
+    // Restore premium state immediately from cache so UI shows correct state
+    // before StoreKit verification completes. updatePurchasedProducts() will
+    // overwrite this with the verified result shortly after launch.
+    private func restoreCachedPremium() {
+        guard
+            let id = UserDefaults.standard.string(forKey: Self.cachedProductIDKey),
+            let expiry = UserDefaults.standard.object(forKey: Self.cachedExpiryKey) as? Date,
+            expiry > Date()
+        else { return }
+        purchasedProductIDs.insert(id)
+        activeSubscriptionProductID = id
+        subscriptionExpiryDate = expiry
     }
 
     // MARK: - Products
@@ -46,7 +65,6 @@ final class SubscriptionManager {
             }
             productLoadFailed = products.isEmpty
         } catch {
-            print("StoreKit product load error: \(error)")
             productLoadFailed = true
         }
         await updatePurchasedProducts()
@@ -60,12 +78,30 @@ final class SubscriptionManager {
         let result = try await product.purchase()
         switch result {
         case .success(let verification):
-            let transaction = try checkVerified(verification)
+            // Finish the transaction regardless of verification status so it
+            // doesn't stay stuck in the queue (causes "already subscribed" error)
+            switch verification {
+            case .verified(let t):      await t.finish()
+            case .unverified(let t, _): await t.finish()
+            }
+            // Refresh entitlements from StoreKit
             await updatePurchasedProducts()
-            await transaction.finish()
-            return true
+            // Fallback: entitlements may not propagate immediately in sandbox or
+            // on slow networks. Use the verified transaction data directly.
+            if purchasedProductIDs.isEmpty, case .verified(let t) = verification {
+                purchasedProductIDs.insert(t.productID)
+                activeSubscriptionProductID = t.productID
+                // expirationDate can be nil in Xcode sandbox — fall back to 7 days
+                let expiry = t.expirationDate ?? Date().addingTimeInterval(7 * 24 * 3600)
+                subscriptionExpiryDate = expiry
+                UserDefaults.standard.set(t.productID, forKey: Self.cachedProductIDKey)
+                UserDefaults.standard.set(expiry,      forKey: Self.cachedExpiryKey)
+            }
+            return isPremium
         case .userCancelled:
-            return false
+            try? await AppStore.sync()
+            await updatePurchasedProducts()
+            return isPremium
         case .pending:
             return false
         @unknown default:
@@ -77,9 +113,7 @@ final class SubscriptionManager {
         do {
             try await AppStore.sync()
             await updatePurchasedProducts()
-        } catch {
-            print("Restore failed: \(error)")
-        }
+        } catch {}
     }
 
     // MARK: - Daily Swipe Tracking
@@ -90,9 +124,9 @@ final class SubscriptionManager {
     }
 
     private func loadDailySwipeCount() {
-        let stored   = UserDefaults.standard.integer(forKey: "dailySwipeCount_v1")
+        let stored     = UserDefaults.standard.integer(forKey: "dailySwipeCount_v1")
         let storedDate = UserDefaults.standard.string(forKey: "dailySwipeDate_v1") ?? ""
-        let today    = todayString()
+        let today      = todayString()
         if storedDate == today {
             dailySwipeCount = stored
         } else {
@@ -119,25 +153,49 @@ final class SubscriptionManager {
         var latestProductID: String? = nil
         var latestExpiry: Date? = nil
         for await result in Transaction.currentEntitlements {
-            if let t = try? checkVerified(result) {
+            if case .verified(let t) = result {
+                guard t.revocationDate == nil else { continue }
                 purchased.insert(t.productID)
-                if latestExpiry == nil || (t.expirationDate ?? .distantFuture) > (latestExpiry ?? .distantPast) {
+                let expiry = t.expirationDate ?? .distantFuture
+                if latestExpiry == nil || expiry > (latestExpiry ?? .distantPast) {
                     latestProductID = t.productID
                     latestExpiry = t.expirationDate
                 }
             }
         }
-        purchasedProductIDs = purchased
-        activeSubscriptionProductID = latestProductID
-        subscriptionExpiryDate = latestExpiry
+
+        if !purchased.isEmpty {
+            // StoreKit confirmed an active entitlement — update everything
+            purchasedProductIDs = purchased
+            activeSubscriptionProductID = latestProductID
+            subscriptionExpiryDate = latestExpiry
+            if let id = latestProductID, let expiry = latestExpiry, expiry > Date() {
+                UserDefaults.standard.set(id,     forKey: Self.cachedProductIDKey)
+                UserDefaults.standard.set(expiry, forKey: Self.cachedExpiryKey)
+            }
+        } else {
+            // StoreKit returned nothing (timing issue in sandbox, or slow network).
+            // Only clear premium if the local cache is also expired — otherwise
+            // keep the cached state and let the next verification cycle decide.
+            let cachedExpiry = UserDefaults.standard.object(forKey: Self.cachedExpiryKey) as? Date
+            if let expiry = cachedExpiry, expiry > Date() {
+                // Cache is still valid — don't wipe premium state
+            } else {
+                // Cache expired too — subscription is genuinely gone
+                purchasedProductIDs = []
+                activeSubscriptionProductID = nil
+                subscriptionExpiryDate = nil
+                UserDefaults.standard.removeObject(forKey: Self.cachedProductIDKey)
+                UserDefaults.standard.removeObject(forKey: Self.cachedExpiryKey)
+            }
+        }
     }
 
     private func listenForTransactions() async {
         for await result in Transaction.updates {
-            if let t = try? checkVerified(result) {
-                await updatePurchasedProducts()
-                await t.finish()
-            }
+            guard case .verified(let t) = result else { continue }
+            await t.finish()
+            await updatePurchasedProducts()
         }
     }
 

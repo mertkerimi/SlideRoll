@@ -27,7 +27,9 @@ struct MonthListView: View {
                 backgroundGlows
 
                 Group {
-                    if vm.isLoading {
+                    if vm.authStatus == .denied || vm.authStatus == .restricted {
+                        deniedView
+                    } else if vm.isLoading {
                         loadingView
                     } else if vm.yearGroups.isEmpty {
                         emptyView
@@ -332,6 +334,47 @@ struct MonthListView: View {
             Text(lm.s.loadingPhotos)
                 .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(Theme.textSecondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var deniedView: some View {
+        VStack(spacing: 0) {
+            inlineHeader
+                .padding(.horizontal, 24)
+                .padding(.top, 8)
+                .padding(.bottom, 16)
+
+            Spacer()
+
+            Button {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            } label: {
+                VStack(spacing: 20) {
+                    ZStack {
+                        Circle()
+                            .fill(Theme.accent.opacity(0.12))
+                            .frame(width: 80, height: 80)
+                            .overlay(Circle().stroke(Theme.accent.opacity(0.25), lineWidth: 1.5))
+                        Image(systemName: "plus")
+                            .font(.system(size: 28, weight: .medium))
+                            .foregroundStyle(Theme.accent)
+                    }
+
+                    Text(lm.s.allowPhotosDeniedReason)
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundStyle(Theme.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(4)
+                        .padding(.horizontal, 40)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

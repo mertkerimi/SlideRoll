@@ -466,12 +466,16 @@ struct ReviewView: View {
         cardID = UUID()
         refreshDeletedBytes()
         swipeCount += 1
-        // Offer an ad at a natural break — every 15 decisions or when the section
-        // is finished. AdManager enforces the launch grace + cooldown so this
-        // never feels spammy.
-        if swipeCount % 15 == 0 || nextIndex >= pendingIDs.count {
+        let totalPhotos = pendingIDs.count
+        let isFinishedNow = nextIndex >= totalPhotos
+
+        if swipeCount % 20 == 0 {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                adManager.maybeShow()
+                adManager.show()
+            }
+        } else if isFinishedNow && totalPhotos >= 30 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                adManager.show()
             }
         }
     }

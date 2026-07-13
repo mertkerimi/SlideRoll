@@ -345,9 +345,9 @@ struct GlobalReviewView: View {
         swipeCount += 1
         // Offer an ad at a natural break — every 15 decisions or when the shuffle
         // session is finished. AdManager enforces the launch grace + cooldown.
-        if swipeCount % 15 == 0 || nextIndex >= pendingIDs.count {
+        if swipeCount % 20 == 0 {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                adManager.maybeShow()
+                adManager.show()
             }
         }
     }

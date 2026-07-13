@@ -1,4 +1,5 @@
 import SwiftUI
+import Photos
 
 enum AppTab {
     case home, albums, stats, settings
@@ -22,7 +23,7 @@ struct RootView: View {
                 case .home:
                     MonthListView(selectedTab: $selectedTab)
                         .onAppear {
-                            if !hasSeenAppTour {
+                            if !hasSeenAppTour && vm.authStatus != .denied && vm.authStatus != .restricted {
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                                     showTour = true
                                 }

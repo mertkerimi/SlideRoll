@@ -479,9 +479,9 @@ struct AlbumReviewView: View {
         withAnimation(.easeInOut(duration: 0.1)) { currentIndex = nextIndex }
         cardID = UUID()
         swipeCount += 1
-        if swipeCount % 15 == 0 || nextIndex >= pendingIDs.count {
+        if swipeCount % 20 == 0 {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                adManager.maybeShow()
+                adManager.show()
             }
         }
     }
