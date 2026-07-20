@@ -56,7 +56,13 @@ struct ReviewView: View {
             PaywallView().environment(subManager).environment(lm)
         }
         .onAppear {
-            setupPending()
+            // Presenting an interstitial ad from within this sheet makes SwiftUI
+            // treat the sheet as having disappeared and reappeared, re-firing
+            // onAppear. Only run first-time setup, or an in-progress review's
+            // currentIndex/decisionHistory get silently wiped mid-session.
+            if pendingIDs.isEmpty {
+                setupPending()
+            }
             if !hasSeenReviewTutorial {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                     showTutorial = true

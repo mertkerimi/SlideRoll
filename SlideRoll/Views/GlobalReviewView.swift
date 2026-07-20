@@ -54,6 +54,11 @@ struct GlobalReviewView: View {
             PaywallView().environment(subManager).environment(lm)
         }
         .onAppear {
+            // Presenting an interstitial ad from within this fullScreenCover makes
+            // SwiftUI treat it as having disappeared and reappeared, re-firing
+            // onAppear. Only run first-time setup, or an in-progress session's
+            // currentIndex/decisionHistory get silently wiped mid-review.
+            guard pendingIDs.isEmpty else { return }
             pendingIDs = vm.allPendingIDs
             vm.startCaching(ids: Array(pendingIDs.prefix(10)), targetSize: CGSize(width: 700, height: 900))
         }
