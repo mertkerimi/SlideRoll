@@ -35,7 +35,7 @@ struct PaywallView: View {
                         featureTable
                         planPicker
                         subscribeButton
-                        if selectedProductID == SubscriptionManager.weeklyID {
+                        if selectedProductID == SubscriptionManager.weeklyID && subManager.isEligibleForWeeklyTrial {
                             trialTimeline
                         }
                         footerNote
@@ -246,9 +246,11 @@ struct PaywallView: View {
                         Text(pricePeriod(product))
                             .font(.system(size: 16, weight: .bold, design: .rounded))
                             .foregroundStyle(isSelected ? Theme.accent : Theme.textPrimary)
-                        Text(isTR ? "7 gün ücretsiz deneme" : "7-day free trial")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(Theme.textTertiary)
+                        if subManager.isEligibleForWeeklyTrial {
+                            Text(isTR ? "7 gün ücretsiz deneme" : "7-day free trial")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(Theme.textTertiary)
+                        }
                     } else {
                         Text(product.displayPrice)
                             .font(.system(size: 16, weight: .bold, design: .rounded))
@@ -284,7 +286,10 @@ struct PaywallView: View {
 
     private func planDescriptor(_ product: Product) -> String {
         switch product.id {
-        case SubscriptionManager.weeklyID:  return isTR ? "7 gün ücretsiz dene" : "Try free for 7 days"
+        case SubscriptionManager.weeklyID:
+            return subManager.isEligibleForWeeklyTrial
+                ? (isTR ? "7 gün ücretsiz dene" : "Try free for 7 days")
+                : (isTR ? "Her hafta yenilenir" : "Renews weekly")
         case SubscriptionManager.monthlyID: return isTR ? "Her ay yenilenir"    : "Renews monthly"
         case SubscriptionManager.yearlyID:  return isTR ? "En iyi değer"        : "Best value"
         default: return ""
@@ -322,7 +327,8 @@ struct PaywallView: View {
                     ProgressView().tint(.white)
                 } else {
                     let isWeekly = selectedProductID == SubscriptionManager.weeklyID
-                    Text(isWeekly
+                    let showTrialCTA = isWeekly && subManager.isEligibleForWeeklyTrial
+                    Text(showTrialCTA
                          ? (isTR ? "Ücretsiz Denemeyi Başlat" : "Start Free Trial")
                          : (isTR ? "Premium'a Geç" : "Get Premium"))
                         .font(.system(size: 17, weight: .bold))
