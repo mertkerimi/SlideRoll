@@ -349,12 +349,15 @@ class PhotoLibraryViewModel {
         allAssets[id]?.mediaSubtypes.contains(.photoLive) ?? false
     }
 
-    func loadLivePhoto(for id: String, targetSize: CGSize) async -> PHLivePhoto? {
+    func loadLivePhoto(for id: String, targetSize: CGSize, onProgress: ((Double) -> Void)? = nil) async -> PHLivePhoto? {
         guard let asset = allAssets[id] else { return nil }
         return await withCheckedContinuation { continuation in
             let options = PHLivePhotoRequestOptions()
             options.isNetworkAccessAllowed = true
             options.deliveryMode = .highQualityFormat
+            options.progressHandler = { progress, _, _, _ in
+                DispatchQueue.main.async { onProgress?(progress) }
+            }
             var resumed = false
 
             let requestID = imageManager.requestLivePhoto(
@@ -566,7 +569,7 @@ class PhotoLibraryViewModel {
 
     // Returns the full-quality image, skipping degraded intermediate delivery.
     // Falls back to the degraded version after 10s so slow iCloud downloads never hang.
-    func loadImage(for id: String, targetSize: CGSize) async -> UIImage? {
+    func loadImage(for id: String, targetSize: CGSize, onProgress: ((Double) -> Void)? = nil, onNeedsCloudFetch: (() -> Void)? = nil) async -> UIImage? {
         let asset = allAssets[id] ?? PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil).firstObject
         guard let asset else { return nil }
         return await withCheckedContinuation { continuation in
@@ -575,6 +578,9 @@ class PhotoLibraryViewModel {
             options.deliveryMode = .opportunistic
             options.resizeMode = .fast
             options.isSynchronous = false
+            options.progressHandler = { progress, _, _, _ in
+                DispatchQueue.main.async { onProgress?(progress) }
+            }
             var resumed = false
             var degradedFallback: UIImage? = nil
 
@@ -583,18 +589,39 @@ class PhotoLibraryViewModel {
             ) { image, info in
                 let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
                 if isDegraded {
-                    if !resumed { degradedFallback = image }
+                    if !resumed {
+                        degradedFallback = image
+                        // Photos tells us right here (no need to wait for the
+                        // timeout) that the full-quality version lives in
+                        // iCloud and hasn't been fetched yet.
+                        let needsCloud = (info?[PHImageResultIsInCloudKey] as? Bool) ?? false
+                        if needsCloud {
+                            DispatchQueue.main.async { onNeedsCloudFetch?() }
+                        }
+                    }
                     return
                 }
                 guard !resumed else { return }
                 resumed = true
-                continuation.resume(returning: image)
+                // A non-degraded ("final") delivery can still be a failure — when
+                // the iCloud fetch errors out (e.g. no connection), Photos calls
+                // back with isDegraded == false and whatever local data it has,
+                // but stashes the real failure in PHImageErrorKey.
+                let requestError = info?[PHImageErrorKey] as? Error
+                if requestError != nil {
+                    DispatchQueue.main.async { onNeedsCloudFetch?() }
+                }
+                continuation.resume(returning: image ?? degradedFallback)
             }
 
+            // 10s without a full-quality delivery means the full asset never
+            // arrived from iCloud — even if `isInCloud` reported false (that
+            // check only inspects a tiny local thumbnail, so it can be wrong).
             DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
                 guard !resumed else { return }
                 resumed = true
                 self?.imageManager.cancelImageRequest(requestID)
+                onNeedsCloudFetch?()
                 continuation.resume(returning: degradedFallback)
             }
         }

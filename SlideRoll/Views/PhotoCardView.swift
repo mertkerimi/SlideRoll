@@ -15,11 +15,17 @@ struct PhotoCardView: View {
 
     @Environment(PhotoLibraryViewModel.self) var vm
     @Environment(LanguageManager.self) var lm
+    private let netMonitor = NetworkMonitor.shared
     @State private var offset: CGSize = .zero
     @State private var image: UIImage?
     @State private var isDragging = false
     @State private var isVideo = false
     @State private var isInCloud = false
+    @State private var isDownloadingFromCloud = false
+    @State private var downloadProgress: Double = 0
+    @State private var imageDownloadFailed = false
+    @State private var videoLoadFailed = false
+    @State private var livePhotoLoadFailed = false
     @State private var player: AVPlayer?
     @State private var isVideoLoading = false
     @State private var isPlaying = false
@@ -113,14 +119,41 @@ struct PhotoCardView: View {
             isInCloud = await vm.isInCloud(for: photoID)
             // Phase 1: show thumbnail immediately (prevents blank card)
             image = await vm.loadThumbnail(for: photoID)
-            // Phase 2: upgrade to full quality
-            if let full = await vm.loadImage(for: photoID, targetSize: CGSize(width: 700, height: 900)) {
-                image = full
+
+            // Phase 2: upgrade to full quality. `isInCloud` only inspects a tiny
+            // local thumbnail request, so it can under-report — skip the network
+            // attempt entirely only when we're confident (isInCloud true) AND
+            // offline; otherwise always attempt, and treat a timeout as failure
+            // regardless of what isInCloud said.
+            if isInCloud && !netMonitor.isConnected {
+                imageDownloadFailed = true
+            } else {
+                downloadProgress = 0
+                isDownloadingFromCloud = isInCloud
+                if let full = await vm.loadImage(for: photoID, targetSize: CGSize(width: 700, height: 900), onProgress: { p in
+                    downloadProgress = p
+                }, onNeedsCloudFetch: {
+                    if !netMonitor.isConnected { imageDownloadFailed = true }
+                }) {
+                    image = full
+                }
+                isDownloadingFromCloud = false
             }
+
             if isLivePhoto {
-                let lp = await vm.loadLivePhoto(for: photoID, targetSize: CGSize(width: 700, height: 900))
-                livePhoto = lp
-                isLivePhotoPlaying = true
+                if isInCloud && !netMonitor.isConnected {
+                    livePhotoLoadFailed = true
+                } else {
+                    downloadProgress = 0
+                    isDownloadingFromCloud = isInCloud
+                    let lp = await vm.loadLivePhoto(for: photoID, targetSize: CGSize(width: 700, height: 900), onProgress: { p in
+                        downloadProgress = p
+                    })
+                    livePhoto = lp
+                    isLivePhotoPlaying = true
+                    isDownloadingFromCloud = false
+                    if lp == nil && isInCloud { livePhotoLoadFailed = true }
+                }
             }
         }
         .accessibilityElement(children: .ignore)
@@ -170,13 +203,26 @@ struct PhotoCardView: View {
 
     private func loadInlineVideo() {
         guard !isVideoLoading, let asset = vm.asset(for: photoID) else { return }
+        videoLoadFailed = false
+        if isInCloud && !netMonitor.isConnected {
+            videoLoadFailed = true
+            return
+        }
         isVideoLoading = true
+        if isInCloud { downloadProgress = 0; isDownloadingFromCloud = true }
         let options = PHVideoRequestOptions()
         options.isNetworkAccessAllowed = true
         options.deliveryMode = .automatic
-        PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
+        options.progressHandler = { progress, _, _, _ in
+            DispatchQueue.main.async { self.downloadProgress = progress }
+        }
+        var resumed = false
+        let requestID = PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
             DispatchQueue.main.async {
-                guard let avAsset else { self.isVideoLoading = false; return }
+                guard !resumed else { return }
+                resumed = true
+                self.isDownloadingFromCloud = false
+                guard let avAsset else { self.isVideoLoading = false; self.videoLoadFailed = true; return }
                 try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
                 try? AVAudioSession.sharedInstance().setActive(true)
                 let p = AVPlayer(playerItem: AVPlayerItem(asset: avAsset))
@@ -198,6 +244,18 @@ struct PhotoCardView: View {
                 }
             }
         }
+
+        // 15s timeout — mirrors the live photo / full-res image fallbacks so a
+        // stalled iCloud video download surfaces a clear failure instead of an
+        // indefinite spinner.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 15) {
+            guard !resumed else { return }
+            resumed = true
+            PHImageManager.default().cancelImageRequest(requestID)
+            self.isDownloadingFromCloud = false
+            self.isVideoLoading = false
+            self.videoLoadFailed = true
+        }
     }
 
     private func handleLivePhotoTap() {
@@ -210,14 +268,24 @@ struct PhotoCardView: View {
 
     private func loadLivePhotoAndPlay() {
         guard !isLivePhotoLoading else { return }
+        livePhotoLoadFailed = false
+        if isInCloud && !netMonitor.isConnected {
+            livePhotoLoadFailed = true
+            return
+        }
         isLivePhotoLoading = true
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
         try? AVAudioSession.sharedInstance().setActive(true)
+        if isInCloud { downloadProgress = 0; isDownloadingFromCloud = true }
         Task {
-            let lp = await vm.loadLivePhoto(for: photoID, targetSize: CGSize(width: 700, height: 900))
+            let lp = await vm.loadLivePhoto(for: photoID, targetSize: CGSize(width: 700, height: 900), onProgress: { p in
+                downloadProgress = p
+            })
             livePhoto = lp
             isLivePhotoPlaying = true
             isLivePhotoLoading = false
+            if lp == nil { livePhotoLoadFailed = true }
+            isDownloadingFromCloud = false
         }
     }
 
@@ -241,17 +309,32 @@ struct PhotoCardView: View {
                     .frame(width: size.width, height: size.height)
                     .transition(.opacity.animation(.easeIn(duration: 0.25)))
             } else {
-                VStack(spacing: 12) {
-                    Image(systemName: isVideo ? "video" : "photo")
-                        .font(.system(size: 40))
-                        .foregroundStyle(Theme.textTertiary)
-                    ProgressView().tint(Theme.accent)
+                Button {
+                    retryImageDownload()
+                } label: {
+                    VStack(spacing: 12) {
+                        Image(systemName: imageDownloadFailed ? "wifi.slash" : (isVideo ? "video" : "photo"))
+                            .font(.system(size: 40))
+                            .foregroundStyle(Theme.textTertiary)
+                        if imageDownloadFailed {
+                            Text(lm.s.tapToRetry)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(Theme.textTertiary)
+                        } else if isInCloud && isDownloadingFromCloud {
+                            CloudDownloadIndicator(progress: downloadProgress)
+                        } else {
+                            ProgressView().tint(Theme.accent)
+                        }
+                    }
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .disabled(!imageDownloadFailed)
             }
 
             if isVideo { videoOverlay }
             if isLivePhoto { livePhotoOverlay }
-            if isInCloud { iCloudBadge }
+            if isInCloud || imageDownloadFailed { iCloudBadge }
         }
     }
 
@@ -259,20 +342,44 @@ struct PhotoCardView: View {
         VStack {
             HStack {
                 Spacer()
-                HStack(spacing: 4) {
-                    Image(systemName: "icloud")
-                        .font(.system(size: 11, weight: .semibold))
-                    Text("iCloud")
-                        .font(.system(size: 11, weight: .semibold))
+                Button {
+                    retryImageDownload()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: imageDownloadFailed ? "wifi.slash" : (isDownloadingFromCloud ? "icloud.and.arrow.down" : "icloud"))
+                            .font(.system(size: 11, weight: .semibold))
+                        Text(imageDownloadFailed ? lm.s.noConnectionBadge : (isDownloadingFromCloud ? "\(Int(downloadProgress * 100))%" : "iCloud"))
+                            .font(.system(size: 11, weight: .semibold))
+                            .monospacedDigit()
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(.black.opacity(0.55), in: Capsule())
                 }
-                .foregroundStyle(.white)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(.black.opacity(0.55), in: Capsule())
+                .buttonStyle(.plain)
+                .disabled(!imageDownloadFailed)
                 .padding(.top, 14)
                 .padding(.trailing, 14)
             }
             Spacer()
+        }
+    }
+
+    private func retryImageDownload() {
+        guard imageDownloadFailed, netMonitor.isConnected else { return }
+        imageDownloadFailed = false
+        Task {
+            downloadProgress = 0
+            isDownloadingFromCloud = true
+            if let full = await vm.loadImage(for: photoID, targetSize: CGSize(width: 700, height: 900), onProgress: { p in
+                downloadProgress = p
+            }, onNeedsCloudFetch: {
+                if !netMonitor.isConnected { imageDownloadFailed = true }
+            }) {
+                image = full
+            }
+            isDownloadingFromCloud = false
         }
     }
 
@@ -283,10 +390,23 @@ struct PhotoCardView: View {
                 Circle()
                     .fill(.black.opacity(0.55))
                     .frame(width: 64, height: 64)
-                Image(systemName: isVideoLoading ? "ellipsis" : "play.fill")
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .offset(x: isVideoLoading ? 0 : 3)
+                if videoLoadFailed {
+                    VStack(spacing: 4) {
+                        Image(systemName: "wifi.slash")
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundStyle(.white)
+                        Text(lm.s.tapToRetry)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.85))
+                    }
+                } else if isVideoLoading && isInCloud && isDownloadingFromCloud {
+                    CloudDownloadIndicator(progress: downloadProgress)
+                } else {
+                    Image(systemName: isVideoLoading ? "ellipsis" : "play.fill")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .offset(x: isVideoLoading ? 0 : 3)
+                }
             }
 
             VStack {
@@ -376,22 +496,35 @@ struct PhotoCardView: View {
             VStack {
                 HStack {
                     Spacer()
-                    Image(systemName: isLivePhotoLoading ? "ellipsis" : "livephoto")
+                    Image(systemName: livePhotoLoadFailed ? "wifi.slash" : (isLivePhotoLoading ? "ellipsis" : "livephoto"))
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(.white)
                         .shadow(color: .black.opacity(0.6), radius: 4, x: 0, y: 1)
                         .padding(.trailing, 14)
-                        .padding(.top, isInCloud ? 48 : 14)
+                        .padding(.top, (isInCloud || imageDownloadFailed) ? 48 : 14)
                 }
                 Spacer()
             }
 
-            // Loading indicator — shown while live photo is being fetched
-            if isLivePhotoLoading {
+            // Loading / failure indicator — shown while live photo is being fetched, or if it couldn't be
+            if isLivePhotoLoading || livePhotoLoadFailed {
                 Circle()
                     .fill(.black.opacity(0.45))
                     .frame(width: 56, height: 56)
-                ProgressView().tint(.white).scaleEffect(1.2)
+                if livePhotoLoadFailed {
+                    VStack(spacing: 3) {
+                        Image(systemName: "wifi.slash")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(.white)
+                        Text(lm.s.tapToRetry)
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.85))
+                    }
+                } else if isInCloud && isDownloadingFromCloud {
+                    CloudDownloadIndicator(progress: downloadProgress)
+                } else {
+                    ProgressView().tint(.white).scaleEffect(1.2)
+                }
             }
         }
         .animation(.easeInOut(duration: 0.2), value: isLivePhotoPlaying)
@@ -634,6 +767,28 @@ struct PhotoCardView: View {
                 .padding(.bottom, 12 + videoSeekBarHeight)
             }
         }
+    }
+}
+
+// Circular ring showing iCloud download progress, with a percentage label in the center
+private struct CloudDownloadIndicator: View {
+    let progress: Double
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(Color.white.opacity(0.25), lineWidth: 4)
+            Circle()
+                .trim(from: 0, to: max(0.02, min(1, progress)))
+                .stroke(Color.white, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .animation(.easeOut(duration: 0.15), value: progress)
+            Text("\(Int(progress * 100))%")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .monospacedDigit()
+        }
+        .frame(width: 44, height: 44)
     }
 }
 
