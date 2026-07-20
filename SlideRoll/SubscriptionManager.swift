@@ -16,6 +16,12 @@ final class SubscriptionManager {
     var isLoadingProducts = false
     var productLoadFailed = false
     var isPurchasing = false
+    // Whether the weekly plan's 7-day trial is still available to this user.
+    // StoreKit only grants an introductory offer once per subscription group,
+    // so someone who already used (and ended) their trial is not eligible
+    // again — defaults to true until checked so behavior is unchanged if the
+    // check hasn't completed yet.
+    var isEligibleForWeeklyTrial = true
     var dailySwipeCount: Int = 0
     var activeSubscriptionProductID: String? = nil
     var subscriptionExpiryDate: Date? = nil
@@ -64,10 +70,17 @@ final class SubscriptionManager {
                 (Self.productIDs.firstIndex(of: $0.id) ?? 0) < (Self.productIDs.firstIndex(of: $1.id) ?? 0)
             }
             productLoadFailed = products.isEmpty
+            await refreshTrialEligibility()
         } catch {
             productLoadFailed = true
         }
         await updatePurchasedProducts()
+    }
+
+    private func refreshTrialEligibility() async {
+        guard let weekly = products.first(where: { $0.id == Self.weeklyID }),
+              let subscription = weekly.subscription else { return }
+        isEligibleForWeeklyTrial = await subscription.isEligibleForIntroOffer
     }
 
     // MARK: - Purchase
