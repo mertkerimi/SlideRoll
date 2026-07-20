@@ -16,6 +16,7 @@ struct GlobalReviewView: View {
     @State private var cardFlyout: SwipeDirection? = nil
     @State private var showTrash = false
     @State private var showPaywall = false
+    @State private var showBonusPrompt = false
     @State private var swipeCount = 0
 
     private var isFinished: Bool { pendingIDs.isEmpty || currentIndex >= pendingIDs.count }
@@ -52,6 +53,10 @@ struct GlobalReviewView: View {
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView().environment(subManager).environment(lm)
+        }
+        .sheet(isPresented: $showBonusPrompt) {
+            BonusSwipesPromptView(onEarnedBonus: {}, onGoPremium: { showPaywall = true })
+                .environment(adManager).environment(subManager).environment(lm)
         }
         .onAppear {
             // Presenting an interstitial ad from within this fullScreenCover makes
@@ -328,7 +333,8 @@ struct GlobalReviewView: View {
     private func handleSwipe(_ direction: SwipeDirection) {
         guard currentIndex < pendingIDs.count else { return }
         if direction != .skip && subManager.hasReachedDailyLimit {
-            showPaywall = true; return
+            if subManager.canEarnBonusSwipes { showBonusPrompt = true } else { showPaywall = true }
+            return
         }
         let photoID = pendingIDs[currentIndex]
         let decision: PhotoDecision
@@ -350,7 +356,11 @@ struct GlobalReviewView: View {
         swipeCount += 1
         // Offer an ad at a natural break — every 15 decisions or when the shuffle
         // session is finished. AdManager enforces the launch grace + cooldown.
-        if swipeCount % 20 == 0 {
+        // Skipped if this swipe also hit the daily limit — the bonus/paywall
+        // prompt is about to interrupt anyway, and freeSwipeLimit is a multiple
+        // of 20, so without this a user would see the interstitial and the
+        // "watch an ad for more swipes" offer back to back every single day.
+        if swipeCount % 20 == 0 && !subManager.hasReachedDailyLimit {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 adManager.show()
             }
