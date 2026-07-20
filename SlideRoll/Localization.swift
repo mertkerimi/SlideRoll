@@ -328,6 +328,10 @@ struct Strings {
     var contactSupport: String { L(["Contact & Support","İletişim & Destek","Contacto y soporte","Contact et assistance","Contatti e supporto","Contato e suporte","Kontakt & Support","お問い合わせ・サポート","문의 및 지원","联系与支持","التواصل والدعم","Контакты и поддержка"]) }
     var versionLabel: String   { L(["Version","Sürüm","Versión","Version","Versione","Versão","Version","バージョン","버전","版本","الإصدار","Версия"]) }
 
+    // MARK: - Offline / Download
+    var noConnectionBadge: String { L(["No Connection","Bağlantı Yok","Sin conexión","Aucune connexion","Nessuna connessione","Sem conexão","Keine Verbindung","接続なし","연결 없음","无连接","لا يوجد اتصال","Нет соединения"]) }
+    var tapToRetry: String { L(["Tap to retry","Tekrar denemek için dokun","Toca para reintentar","Touchez pour réessayer","Tocca per riprovare","Toque para tentar novamente","Zum Wiederholen tippen","タップして再試行","다시 시도하려면 탭하세요","点击重试","اضغط لإعادة المحاولة","Нажмите, чтобы повторить"]) }
+
     // MARK: - Accessibility (VoiceOver)
     var a11yPhoto: String     { L(["Photo","Fotoğraf","Foto","Photo","Foto","Foto","Foto","写真","사진","照片","صورة","Фото"]) }
     var a11ySwipeHint: String { L(["Swipe right to keep, left to delete, up for later. Double-tap to undo.","Sağa kaydır tut, sola kaydır sil, yukarı sonraya bırak. Geri almak için çift dokun.","Desliza a la derecha para conservar, a la izquierda para eliminar, arriba para después. Doble toque para deshacer.","Glissez à droite pour garder, à gauche pour supprimer, en haut pour plus tard. Double-touchez pour annuler.","Scorri a destra per tenere, a sinistra per eliminare, su per dopo. Tocca due volte per annullare.","Deslize para a direita para manter, para a esquerda para excluir, para cima para depois. Toque duplo para desfazer.","Nach rechts wischen zum Behalten, links zum Löschen, oben für später. Zum Rückgängigmachen doppeltippen.","右で保持、左で削除、上で後で。取り消すにはダブルタップ。","오른쪽으로 넘기면 유지, 왼쪽은 삭제, 위는 나중에. 실행 취소하려면 두 번 탭.","右滑保留，左滑删除，上滑稍后。双击撤销。","اسحب يمينًا للاحتفاظ، يسارًا للحذف، أعلى للاحقًا. انقر مرتين للتراجع.","Свайп вправо — оставить, влево — удалить, вверх — позже. Двойное нажатие — отмена."]) }
