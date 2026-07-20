@@ -49,7 +49,20 @@ struct PhotoCardView: View {
     @State private var lastScale: CGFloat = 1.0
     @State private var zoomOffset: CGSize = .zero
     @State private var lastZoomOffset: CGSize = .zero
+    @State private var cardSize: CGSize = .zero
     private var isZoomed: Bool { scale > 1.01 }
+
+    // Keeps the pan within the extra room the current zoom level actually
+    // provides — without this, dragging far enough pulls the (still-clipped)
+    // image completely out of the card, leaving a blank card behind it.
+    private func clampedZoomOffset(_ offset: CGSize) -> CGSize {
+        let maxX = max(0, (scale - 1) * cardSize.width / 2)
+        let maxY = max(0, (scale - 1) * cardSize.height / 2)
+        return CGSize(
+            width: min(max(offset.width, -maxX), maxX),
+            height: min(max(offset.height, -maxY), maxY)
+        )
+    }
 
     private let lightImpact  = UIImpactFeedbackGenerator(style: .light)
     private let heavyImpact  = UIImpactFeedbackGenerator(style: .heavy)
@@ -74,11 +87,20 @@ struct PhotoCardView: View {
     var body: some View {
         GeometryReader { geo in
             ZStack {
+                // Zoom scale/pan apply only to the photo content, not the share/
+                // favorite/undo button overlays below — those must stay fixed in
+                // the card's own coordinate space instead of panning/scaling
+                // along with the image underneath them.
                 photoLayer(size: geo.size)
+                    .scaleEffect(isZoomed ? scale : 1.0)
+                    .offset(isZoomed ? zoomOffset : .zero)
                 swipeColorOverlay
                 keepBadge.opacity(keepOpacity)
                 deleteBadge.opacity(deleteOpacity)
                 skipBadge.opacity(skipOpacity)
+                if isVideo { videoOverlay }
+                if isLivePhoto { livePhotoOverlay }
+                if isInCloud || imageDownloadFailed { iCloudBadge }
                 shareButton
                 favoriteButton
                 if isVideo || isLivePhoto {
@@ -88,9 +110,8 @@ struct PhotoCardView: View {
             .frame(width: geo.size.width, height: geo.size.height)
             .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
             .shadow(color: .black.opacity(0.18), radius: 24, y: 10)
-            .offset(isZoomed ? zoomOffset : offset)
+            .offset(isZoomed ? .zero : offset)
             .rotationEffect(.degrees(rotation))
-            .scaleEffect(isZoomed ? scale : 1.0)
             .gesture(combinedDragGesture)
             .gesture(magnifyGesture)
             .onTapGesture {
@@ -109,6 +130,8 @@ struct PhotoCardView: View {
                     }
                 }
             }
+            .onAppear { cardSize = geo.size }
+            .onChange(of: geo.size) { _, newSize in cardSize = newSize }
         }
         .task {
             lightImpact.prepare()
@@ -331,10 +354,6 @@ struct PhotoCardView: View {
                 .buttonStyle(.plain)
                 .disabled(!imageDownloadFailed)
             }
-
-            if isVideo { videoOverlay }
-            if isLivePhoto { livePhotoOverlay }
-            if isInCloud || imageDownloadFailed { iCloudBadge }
         }
     }
 
@@ -389,7 +408,7 @@ struct PhotoCardView: View {
                 // Play button — shown when paused / not yet started
                 Circle()
                     .fill(.black.opacity(0.55))
-                    .frame(width: 64, height: 64)
+                    .frame(width: videoLoadFailed ? 100 : 64, height: videoLoadFailed ? 100 : 64)
                 if videoLoadFailed {
                     VStack(spacing: 4) {
                         Image(systemName: "wifi.slash")
@@ -398,6 +417,9 @@ struct PhotoCardView: View {
                         Text(lm.s.tapToRetry)
                             .font(.system(size: 10, weight: .medium))
                             .foregroundStyle(.white.opacity(0.85))
+                            .multilineTextAlignment(.center)
+                            .frame(width: 84)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 } else if isVideoLoading && isInCloud && isDownloadingFromCloud {
                     CloudDownloadIndicator(progress: downloadProgress)
@@ -510,7 +532,7 @@ struct PhotoCardView: View {
             if isLivePhotoLoading || livePhotoLoadFailed {
                 Circle()
                     .fill(.black.opacity(0.45))
-                    .frame(width: 56, height: 56)
+                    .frame(width: livePhotoLoadFailed ? 90 : 56, height: livePhotoLoadFailed ? 90 : 56)
                 if livePhotoLoadFailed {
                     VStack(spacing: 3) {
                         Image(systemName: "wifi.slash")
@@ -519,6 +541,9 @@ struct PhotoCardView: View {
                         Text(lm.s.tapToRetry)
                             .font(.system(size: 9, weight: .medium))
                             .foregroundStyle(.white.opacity(0.85))
+                            .multilineTextAlignment(.center)
+                            .frame(width: 76)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 } else if isInCloud && isDownloadingFromCloud {
                     CloudDownloadIndicator(progress: downloadProgress)
@@ -538,10 +563,10 @@ struct PhotoCardView: View {
         DragGesture()
             .onChanged { value in
                 if isZoomed {
-                    zoomOffset = CGSize(
+                    zoomOffset = clampedZoomOffset(CGSize(
                         width: lastZoomOffset.width + value.translation.width,
                         height: lastZoomOffset.height + value.translation.height
-                    )
+                    ))
                 } else {
                     isDragging = true
                     withAnimation(.interactiveSpring(response: 0.25, dampingFraction: 0.8)) {
@@ -576,6 +601,11 @@ struct PhotoCardView: View {
                 let delta = value / lastScale
                 lastScale = value
                 scale = min(max(scale * delta, 1.0), 4.0)
+                // Zooming back out shrinks how far the image can be panned —
+                // pull any excess pan back in so content never ends up
+                // clamped-out entirely, leaving blank space in the card.
+                zoomOffset = clampedZoomOffset(zoomOffset)
+                lastZoomOffset = zoomOffset
             }
             .onEnded { _ in
                 lastScale = 1.0
