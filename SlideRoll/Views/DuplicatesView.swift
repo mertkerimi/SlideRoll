@@ -70,6 +70,7 @@ struct DuplicatesView: View {
                                     .foregroundStyle(Theme.textTertiary)
                             }
                         }
+                        .padding(.horizontal, 6)
                     }
                 }
             }
@@ -97,6 +98,21 @@ struct DuplicatesView: View {
         }
     }
 
+    // Shown when the user has caught up to every group found so far, but the
+    // background scan hasn't finished — distinct from `loadingView`, which is
+    // only for the very first moment before anything has been found at all.
+    private var searchingMoreView: some View {
+        VStack(spacing: 12) {
+            ProgressView()
+                .tint(.yellow)
+            Text(isTR ? "Diğer olası kopyalar aranıyor..." : "Searching for more possible duplicates...")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Theme.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 60)
+    }
+
     // MARK: - Main Content
 
     private var mainContent: some View {
@@ -121,6 +137,11 @@ struct DuplicatesView: View {
                         .padding(.horizontal, 16)
                         .id(currentIndex)
                 }
+            } else if vm.statsLoading {
+                // Caught up to everything found so far, but the background
+                // scan is still running — without this, a user who reviews
+                // quickly hits a blank gap here until more groups stream in.
+                searchingMoreView
             }
 
             Spacer(minLength: 0)

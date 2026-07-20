@@ -772,12 +772,24 @@ class PhotoLibraryViewModel {
                 let key = ids.sorted().joined(separator: ",")
                 if seenKeys.insert(key).inserted { fastGroups.append(ids) }
             }
+            // Trickle these in a chunk at a time instead of one big dump — the
+            // full-enumeration loop above runs silently with no UI feedback,
+            // so dropping hundreds of groups on the screen at once right after
+            // it finishes reads as "nothing, then everything at once."
             if !fastGroups.isEmpty {
-                let fg = fastGroups
-                Task { @MainActor in
-                    let existing = Set(self.duplicateGroups.map { $0.sorted().joined(separator: ",") })
-                    for ids in fg where !existing.contains(ids.sorted().joined(separator: ",")) {
-                        self.duplicateGroups.append(ids)
+                let chunkSize = 12
+                var idx = 0
+                while idx < fastGroups.count {
+                    let chunk = Array(fastGroups[idx..<min(idx + chunkSize, fastGroups.count)])
+                    await MainActor.run {
+                        let existing = Set(self.duplicateGroups.map { $0.sorted().joined(separator: ",") })
+                        for ids in chunk where !existing.contains(ids.sorted().joined(separator: ",")) {
+                            self.duplicateGroups.append(ids)
+                        }
+                    }
+                    idx += chunkSize
+                    if idx < fastGroups.count {
+                        try? await Task.sleep(nanoseconds: 80_000_000)
                     }
                 }
             }
