@@ -7,7 +7,12 @@ final class SubscriptionManager {
     static let weeklyID  = "com.mertkerimi.slideroll.weekly"
     static let monthlyID = "com.mertkerimi.slideroll.monthly"
     static let yearlyID  = "com.mertkerimi.slideroll.yearly"
-    static let freeSwipeLimit = 200
+    static let freeSwipeLimit = 300
+    // Rewarded-ad bonus: free users can watch up to 2 ads/day to unlock 100
+    // more swipes each (so up to 500 total/day) — capped, not infinite, so it
+    // never fully replaces the "unlimited, no ads" pitch of subscribing.
+    static let bonusSwipeAmount = 100
+    static let maxDailyBonusGrants = 2
 
     private static let productIDs = [weeklyID, monthlyID, yearlyID]
 
@@ -23,6 +28,7 @@ final class SubscriptionManager {
     // check hasn't completed yet.
     var isEligibleForWeeklyTrial = true
     var dailySwipeCount: Int = 0
+    var bonusSwipesEarnedToday: Int = 0
     var activeSubscriptionProductID: String? = nil
     var subscriptionExpiryDate: Date? = nil
 
@@ -32,8 +38,22 @@ final class SubscriptionManager {
 
     var isPremium: Bool { !purchasedProductIDs.isEmpty }
 
+    private var effectiveDailyLimit: Int { Self.freeSwipeLimit + bonusSwipesEarnedToday }
+
     var hasReachedDailyLimit: Bool {
-        !isPremium && dailySwipeCount >= Self.freeSwipeLimit
+        !isPremium && dailySwipeCount >= effectiveDailyLimit
+    }
+
+    // Whether there's still a rewarded-ad bonus left to offer today.
+    var canEarnBonusSwipes: Bool {
+        !isPremium && bonusSwipesEarnedToday < Self.bonusSwipeAmount * Self.maxDailyBonusGrants
+    }
+
+    // Call after a rewarded ad finishes and the user actually earned the reward.
+    func grantBonusSwipes() {
+        guard canEarnBonusSwipes else { return }
+        bonusSwipesEarnedToday += Self.bonusSwipeAmount
+        saveDailySwipeCount()
     }
 
     private var updatesTask: Task<Void, Never>?
@@ -137,21 +157,26 @@ final class SubscriptionManager {
     }
 
     private func loadDailySwipeCount() {
-        let stored     = UserDefaults.standard.integer(forKey: "dailySwipeCount_v1")
-        let storedDate = UserDefaults.standard.string(forKey: "dailySwipeDate_v1") ?? ""
-        let today      = todayString()
+        let stored       = UserDefaults.standard.integer(forKey: "dailySwipeCount_v1")
+        let storedBonus  = UserDefaults.standard.integer(forKey: "bonusSwipesEarnedToday_v1")
+        let storedDate   = UserDefaults.standard.string(forKey: "dailySwipeDate_v1") ?? ""
+        let today        = todayString()
         if storedDate == today {
             dailySwipeCount = stored
+            bonusSwipesEarnedToday = storedBonus
         } else {
             dailySwipeCount = 0
+            bonusSwipesEarnedToday = 0
             UserDefaults.standard.set(today, forKey: "dailySwipeDate_v1")
             UserDefaults.standard.set(0,     forKey: "dailySwipeCount_v1")
+            UserDefaults.standard.set(0,     forKey: "bonusSwipesEarnedToday_v1")
         }
     }
 
     private func saveDailySwipeCount() {
-        UserDefaults.standard.set(dailySwipeCount, forKey: "dailySwipeCount_v1")
-        UserDefaults.standard.set(todayString(),   forKey: "dailySwipeDate_v1")
+        UserDefaults.standard.set(dailySwipeCount,         forKey: "dailySwipeCount_v1")
+        UserDefaults.standard.set(bonusSwipesEarnedToday,   forKey: "bonusSwipesEarnedToday_v1")
+        UserDefaults.standard.set(todayString(),            forKey: "dailySwipeDate_v1")
     }
 
     private func todayString() -> String {

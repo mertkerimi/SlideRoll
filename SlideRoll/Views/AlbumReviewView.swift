@@ -23,6 +23,7 @@ struct AlbumReviewView: View {
     @State private var showTutorial = false
     @State private var showTrash = false
     @State private var showPaywall = false
+    @State private var showBonusPrompt = false
 
     private var isFinished: Bool { pendingIDs.isEmpty || currentIndex >= pendingIDs.count }
 
@@ -61,6 +62,10 @@ struct AlbumReviewView: View {
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView().environment(subManager).environment(lm)
+        }
+        .sheet(isPresented: $showBonusPrompt) {
+            BonusSwipesPromptView(onEarnedBonus: {}, onGoPremium: { showPaywall = true })
+                .environment(adManager).environment(subManager).environment(lm)
         }
         .onAppear {
             NotificationCenter.default.post(name: .hideTabBar, object: nil)
@@ -459,7 +464,8 @@ struct AlbumReviewView: View {
     private func handleSwipe(_ direction: SwipeDirection) {
         guard currentIndex < pendingIDs.count else { return }
         if direction != .skip && subManager.hasReachedDailyLimit {
-            showPaywall = true; return
+            if subManager.canEarnBonusSwipes { showBonusPrompt = true } else { showPaywall = true }
+            return
         }
         let photoID = pendingIDs[currentIndex]
         let decision: PhotoDecision
@@ -484,7 +490,12 @@ struct AlbumReviewView: View {
         withAnimation(.easeInOut(duration: 0.1)) { currentIndex = nextIndex }
         cardID = UUID()
         swipeCount += 1
-        if swipeCount % 20 == 0 {
+        // Skip the regular interstitial if this exact swipe also hit the daily
+        // limit — the bonus/paywall prompt is about to interrupt anyway, and
+        // freeSwipeLimit is a multiple of 20, so without this a user would see
+        // the interstitial and the "watch an ad for more swipes" offer back to
+        // back every single time they run out for the day.
+        if swipeCount % 20 == 0 && !subManager.hasReachedDailyLimit {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 adManager.show()
             }
