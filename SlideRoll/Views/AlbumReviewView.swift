@@ -64,7 +64,12 @@ struct AlbumReviewView: View {
         }
         .onAppear {
             NotificationCenter.default.post(name: .hideTabBar, object: nil)
-            loadAssets()
+            // Presenting an interstitial ad can make SwiftUI treat this screen as
+            // having disappeared and reappeared, re-firing onAppear. Only load on
+            // first appearance, or an in-progress review's state gets reset.
+            if pendingIDs.isEmpty {
+                loadAssets()
+            }
             if !hasSeenReviewTutorial {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { showTutorial = true }
             }
