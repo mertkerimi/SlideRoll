@@ -54,6 +54,14 @@ class PhotoLibraryViewModel {
         set { UserDefaults.standard.set(newValue, forKey: "TotalDeletedCount") }
     }
 
+    // Duplicate groups the user chose to skip in "Olası Kopyalar", keyed by
+    // their sorted-photoID list joined with ",". Persisted so a skip sticks
+    // across app sessions instead of resurfacing the same group every time.
+    var skippedDuplicateGroupKeys: Set<String> {
+        get { Set(UserDefaults.standard.stringArray(forKey: "SkippedDuplicateGroupKeys") ?? []) }
+        set { UserDefaults.standard.set(Array(newValue), forKey: "SkippedDuplicateGroupKeys") }
+    }
+
     var deletedCountByYear: [String: Int] {
         get { UserDefaults.standard.dictionary(forKey: "DeletedCountByYear") as? [String: Int] ?? [:] }
         set { UserDefaults.standard.set(newValue, forKey: "DeletedCountByYear") }

@@ -105,10 +105,15 @@ struct DuplicatesView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
 
-            hintBanner
-                .padding(.horizontal, 20)
-                .padding(.top, 14)
-                .padding(.bottom, 16)
+            HStack(spacing: 8) {
+                hintBanner
+                if skippedGroupsCount > 0 {
+                    skippedChip
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 14)
+            .padding(.bottom, 16)
 
             if let group = current {
                 ScrollView(showsIndicators: false) {
@@ -164,6 +169,25 @@ struct DuplicatesView: View {
         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Theme.border, lineWidth: 1))
     }
 
+    // MARK: - Skipped Chip
+
+    private var skippedChip: some View {
+        Button { resetSkipped() } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "arrow.uturn.backward")
+                    .font(.system(size: 10, weight: .semibold))
+                Text(isTR ? "\(skippedGroupsCount) atlandı" : "\(skippedGroupsCount) skipped")
+                    .font(.system(size: 12, weight: .semibold))
+            }
+            .foregroundStyle(Theme.textTertiary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Theme.surface, in: Capsule())
+            .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: - Photo Grid (always 2 columns for readability)
 
     private func photoGrid(ids: [String]) -> some View {
@@ -187,7 +211,7 @@ struct DuplicatesView: View {
 
     private var actionArea: some View {
         HStack(spacing: 12) {
-            Button { advance() } label: {
+            Button { skipCurrentGroup() } label: {
                 HStack(spacing: 6) {
                     Text(lm.s.dupSkip)
                         .font(.system(size: 15, weight: .medium))
@@ -247,6 +271,24 @@ struct DuplicatesView: View {
                     .foregroundStyle(Theme.textSecondary)
                     .multilineTextAlignment(.center)
             }
+            if skippedGroupsCount > 0 {
+                Button { resetSkipped() } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.uturn.backward")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text(isTR
+                             ? "\(skippedGroupsCount) grup atlandı — tekrar gözden geçir"
+                             : "\(skippedGroupsCount) skipped — review again")
+                            .font(.system(size: 14, weight: .semibold))
+                    }
+                    .foregroundStyle(Theme.accent)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Theme.accent.opacity(0.12), in: Capsule())
+                    .overlay(Capsule().stroke(Theme.accent.opacity(0.25), lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+            }
             Spacer()
         }
     }
@@ -265,23 +307,84 @@ struct DuplicatesView: View {
         advance()
     }
 
+    // "Bu grubu atla" — persists the skip so it doesn't resurface next session.
+    private func skipCurrentGroup() {
+        if let group = current {
+            var keys = vm.skippedDuplicateGroupKeys
+            keys.insert(group.sorted().joined(separator: ","))
+            vm.skippedDuplicateGroupKeys = keys
+        }
+        advance()
+    }
+
     private func advance() {
         toDelete = []
         withAnimation(.easeInOut(duration: 0.3)) { currentIndex += 1 }
     }
 
-    // Appends only genuinely new groups (not already in remaining)
+    // Appends only genuinely new groups (not already in remaining, not skipped)
     private func appendNewGroups(from allGroups: [[String]]) {
         let decidedIDs = Set(vm.monthGroups.flatMap { g in
             g.decisions.compactMap { id, d in d != .undecided ? id : nil }
         })
+        let skippedKeys = vm.skippedDuplicateGroupKeys
         let existingKeys = Set(remaining.map { $0.sorted().joined(separator: ",") })
         let newOnes = allGroups.compactMap { group -> [String]? in
             let undecided = group.filter { !decidedIDs.contains($0) }
             guard undecided.count >= 2 else { return nil }
-            return existingKeys.contains(undecided.sorted().joined(separator: ",")) ? nil : undecided
+            let key = undecided.sorted().joined(separator: ",")
+            return (existingKeys.contains(key) || skippedKeys.contains(key)) ? nil : undecided
         }
         if !newOnes.isEmpty { remaining.append(contentsOf: newOnes) }
+    }
+
+    // Currently-skipped groups that are still valid possible-duplicate groups
+    // (i.e. haven't since been fully decided elsewhere in the app).
+    private var skippedGroupsCount: Int {
+        let keys = vm.skippedDuplicateGroupKeys
+        guard !keys.isEmpty else { return 0 }
+        let decidedIDs = Set(vm.monthGroups.flatMap { g in
+            g.decisions.compactMap { id, d in d != .undecided ? id : nil }
+        })
+        return vm.duplicateGroups.reduce(into: 0) { count, group in
+            let undecided = group.filter { !decidedIDs.contains($0) }
+            guard undecided.count >= 2 else { return }
+            if keys.contains(undecided.sorted().joined(separator: ",")) { count += 1 }
+        }
+    }
+
+    // Un-skips every currently-skipped group and queues them back up for review.
+    private func resetSkipped() {
+        let keys = vm.skippedDuplicateGroupKeys
+        guard !keys.isEmpty else { return }
+        vm.skippedDuplicateGroupKeys = []
+
+        // Skipped groups were never removed from `remaining` — currentIndex
+        // just moved past them — so blindly appending "restored" copies would
+        // duplicate them (and inflate the total count, e.g. 250 -> 500).
+        // Strip out their old entries first, adjusting currentIndex for
+        // whatever was removed ahead of it, before adding fresh copies back.
+        var removedBeforeCurrent = 0
+        var trimmed: [[String]] = []
+        for (i, group) in remaining.enumerated() {
+            if keys.contains(group.sorted().joined(separator: ",")) {
+                if i < currentIndex { removedBeforeCurrent += 1 }
+            } else {
+                trimmed.append(group)
+            }
+        }
+        currentIndex -= removedBeforeCurrent
+        remaining = trimmed
+
+        let decidedIDs = Set(vm.monthGroups.flatMap { g in
+            g.decisions.compactMap { id, d in d != .undecided ? id : nil }
+        })
+        let restored = vm.duplicateGroups.compactMap { group -> [String]? in
+            let undecided = group.filter { !decidedIDs.contains($0) }
+            guard undecided.count >= 2 else { return nil }
+            return keys.contains(undecided.sorted().joined(separator: ",")) ? undecided : nil
+        }
+        remaining.append(contentsOf: restored)
     }
 
     // MARK: - Background
@@ -314,89 +417,99 @@ struct DupPhotoCell: View {
     @State private var showFullscreen = false
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            // Photo
-            Group {
-                if let img = image {
-                    Image(uiImage: img)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } else {
-                    Theme.surface
-                        .overlay(ProgressView().tint(Theme.accent).scaleEffect(0.7))
-                }
-            }
-            .frame(height: 240)
-            .clipped()
-
-            // Delete overlay
-            if isMarkedForDelete {
-                Color.red.opacity(0.35)
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 48))
-                    .foregroundStyle(.white.opacity(0.9))
-                    .shadow(color: .black.opacity(0.3), radius: 4)
-                    .transition(.scale(scale: 0.6).combined(with: .opacity))
-            }
-
-            // Bottom metadata bar (only when not marked)
-            if image != nil && !isMarkedForDelete {
-                LinearGradient(
-                    colors: [.clear, .black.opacity(0.65)],
-                    startPoint: .center,
-                    endPoint: .bottom
-                )
-                VStack(spacing: 2) {
-                    if let date = dateLabel {
-                        Text(date)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.85))
-                    }
-                    if let mb = fileMB {
-                        Text(String(format: "%.1f MB", mb))
-                            .font(.system(size: 10, weight: .medium, design: .monospaced))
-                            .foregroundStyle(.white.opacity(0.6))
+        // A `.frame(height:)`-only Image with `.aspectRatio(.fill)` computes its
+        // OWN ideal width from the source photo's aspect ratio (240 * ratio) and
+        // reports that upward — for a landscape photo that's wider than the
+        // grid column, so it renders past the column into the next one.
+        // `.frame(maxWidth: .infinity)` doesn't fix this (it's only a ceiling,
+        // not a target), so read the column's *actual* width via GeometryReader
+        // and pin the image to that exact size before clipping.
+        GeometryReader { geo in
+            ZStack(alignment: .bottom) {
+                // Photo
+                Group {
+                    if let img = image {
+                        Image(uiImage: img)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } else {
+                        Theme.surface
+                            .overlay(ProgressView().tint(Theme.accent).scaleEffect(0.7))
                     }
                 }
-                .padding(.bottom, 10)
+                .frame(width: geo.size.width, height: geo.size.height)
+                .clipped()
+
+                // Delete overlay
+                if isMarkedForDelete {
+                    Color.red.opacity(0.35)
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 48))
+                        .foregroundStyle(.white.opacity(0.9))
+                        .shadow(color: .black.opacity(0.3), radius: 4)
+                        .transition(.scale(scale: 0.6).combined(with: .opacity))
+                }
+
+                // Bottom metadata bar (only when not marked)
+                if image != nil && !isMarkedForDelete {
+                    LinearGradient(
+                        colors: [.clear, .black.opacity(0.65)],
+                        startPoint: .center,
+                        endPoint: .bottom
+                    )
+                    VStack(spacing: 2) {
+                        if let date = dateLabel {
+                            Text(date)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(.white.opacity(0.85))
+                        }
+                        if let mb = fileMB {
+                            Text(String(format: "%.1f MB", mb))
+                                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                .foregroundStyle(.white.opacity(0.6))
+                        }
+                    }
+                    .padding(.bottom, 10)
+                }
             }
+            .frame(width: geo.size.width, height: geo.size.height)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(
+                        isMarkedForDelete ? Color.red.opacity(0.85) : Theme.border,
+                        lineWidth: isMarkedForDelete ? 2.5 : 1
+                    )
+            )
+            // Live photo badge — top left
+            .overlay(alignment: .topLeading) {
+                if asset?.mediaSubtypes.contains(.photoLive) == true {
+                    Image(systemName: "livephoto")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(6)
+                        .background(.black.opacity(0.45), in: Circle())
+                        .padding(8)
+                }
+            }
+            // Fullscreen expand button — top right
+            .overlay(alignment: .topTrailing) {
+                if image != nil {
+                    Button { showFullscreen = true } label: {
+                        Image(systemName: "arrow.up.left.and.arrow.down.right")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(7)
+                            .background(.black.opacity(0.45), in: Circle())
+                    }
+                    .padding(8)
+                }
+            }
+            .scaleEffect(isMarkedForDelete ? 0.97 : 1.0)
+            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isMarkedForDelete)
+            .onTapGesture { onToggle() }
         }
         .frame(height: 240)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(
-                    isMarkedForDelete ? Color.red.opacity(0.85) : Theme.border,
-                    lineWidth: isMarkedForDelete ? 2.5 : 1
-                )
-        )
-        // Live photo badge — top left
-        .overlay(alignment: .topLeading) {
-            if asset?.mediaSubtypes.contains(.photoLive) == true {
-                Image(systemName: "livephoto")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .padding(6)
-                    .background(.black.opacity(0.45), in: Circle())
-                    .padding(8)
-            }
-        }
-        // Fullscreen expand button — top right
-        .overlay(alignment: .topTrailing) {
-            if image != nil {
-                Button { showFullscreen = true } label: {
-                    Image(systemName: "arrow.up.left.and.arrow.down.right")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(7)
-                        .background(.black.opacity(0.45), in: Circle())
-                }
-                .padding(8)
-            }
-        }
-        .scaleEffect(isMarkedForDelete ? 0.97 : 1.0)
-        .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isMarkedForDelete)
-        .onTapGesture { onToggle() }
         .sheet(isPresented: $showFullscreen) {
             FullscreenPhotoView(
                 groupIDs: groupIDs,
