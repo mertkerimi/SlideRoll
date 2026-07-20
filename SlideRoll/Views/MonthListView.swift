@@ -168,8 +168,8 @@ struct MonthListView: View {
     // MARK: Summary Header
 
     private var summaryHeader: some View {
-        let totalPhotos   = vm.yearGroups.reduce(0) { $0 + $1.total }
-        let totalReviewed = vm.yearGroups.reduce(0) { $0 + $1.reviewed }
+        let totalPhotos   = vm.lifetimeTotalCount
+        let totalReviewed = vm.lifetimeReviewedCount
         let progress = totalPhotos > 0 ? Double(totalReviewed) / Double(totalPhotos) : 0
         let s = lm.s
 

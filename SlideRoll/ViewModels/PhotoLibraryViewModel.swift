@@ -31,6 +31,19 @@ class PhotoLibraryViewModel {
             group.filter { !decidedIDs.contains($0) }.count >= 2
         }.count
     }
+    // Lifetime reviewed/total counts for the overall-progress UI. Permanently
+    // deleting photos removes them from monthGroups entirely (they no longer
+    // exist), which would otherwise make "reviewed" and "total" silently drop
+    // by the same amount and erase past progress from view. totalDeletedCount
+    // is a persisted, monotonically-increasing counter, so adding it back in
+    // keeps both figures — and the percentage — stable across deletions.
+    var lifetimeReviewedCount: Int {
+        monthGroups.reduce(0) { $0 + $1.reviewed } + totalDeletedCount
+    }
+    var lifetimeTotalCount: Int {
+        monthGroups.reduce(0) { $0 + $1.total } + totalDeletedCount
+    }
+
     var statsLoading = false
     private var statsLoaded = false
 

@@ -321,8 +321,8 @@ struct StatsView: View {
     // MARK: - SlideRoll Card
 
     private var summaryCard: some View {
-        let totalReviewed = vm.monthGroups.reduce(0) { $0 + $1.reviewed }
-        let totalPhotos   = vm.monthGroups.reduce(0) { $0 + $1.total }
+        let totalReviewed = vm.lifetimeReviewedCount
+        let totalPhotos   = vm.lifetimeTotalCount
         let toDelete      = vm.toDeleteIDs.count
         let kept          = vm.monthGroups.reduce(0) { $0 + $1.decisions.values.filter { $0 == .keep }.count }
         let progress      = totalPhotos > 0 ? Double(totalReviewed) / Double(totalPhotos) : 0
