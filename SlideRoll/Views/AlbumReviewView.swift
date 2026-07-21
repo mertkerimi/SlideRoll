@@ -63,8 +63,8 @@ struct AlbumReviewView: View {
         .sheet(isPresented: $showPaywall) {
             PaywallView().environment(subManager).environment(lm)
         }
-        .sheet(isPresented: $showBonusPrompt) {
-            BonusSwipesPromptView(onEarnedBonus: {}, onGoPremium: { showPaywall = true })
+        .overlay {
+            BonusSwipesPromptView(isPresented: $showBonusPrompt, onEarnedBonus: {}, onGoPremium: { showPaywall = true })
                 .environment(adManager).environment(subManager).environment(lm)
         }
         .onAppear {
