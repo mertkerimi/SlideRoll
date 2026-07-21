@@ -4,11 +4,17 @@ import SwiftUI
 // rewarded-ad bonus available (SubscriptionManager.canEarnBonusSwipes).
 // Offers a capped way to keep going today without subscribing, while still
 // leaving subscribing as the only way to remove the daily limit entirely.
+//
+// Built as a custom bottom overlay instead of a system `.sheet` — a compact
+// `.height()` presentationDetent renders as a floating card with visible
+// margins on every side (standard iOS behavior for sheets that don't reach
+// the `.large` detent), which left an ugly gap below the content that
+// couldn't be tuned away. This version sits flush against the bottom edge.
 struct BonusSwipesPromptView: View {
     @Environment(AdManager.self) var adManager
     @Environment(SubscriptionManager.self) var subManager
     @Environment(LanguageManager.self) var lm
-    @Environment(\.dismiss) var dismiss
+    @Binding var isPresented: Bool
 
     let onEarnedBonus: () -> Void
     let onGoPremium: () -> Void
@@ -17,7 +23,27 @@ struct BonusSwipesPromptView: View {
 
     private var isTR: Bool { lm.selected == .turkish }
 
+    // How many of today's rewarded-ad bonus grants are still unused.
+    private var remainingGrants: Int {
+        SubscriptionManager.maxDailyBonusGrants - (subManager.bonusSwipesEarnedToday / SubscriptionManager.bonusSwipeAmount)
+    }
+
     var body: some View {
+        ZStack(alignment: .bottom) {
+            if isPresented {
+                Color.black.opacity(0.45)
+                    .ignoresSafeArea()
+                    .onTapGesture { if !isShowingAd { isPresented = false } }
+                    .transition(.opacity)
+
+                card
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.spring(response: 0.4, dampingFraction: 0.86), value: isPresented)
+    }
+
+    private var card: some View {
         VStack(spacing: 20) {
             Capsule()
                 .fill(Theme.border)
@@ -48,6 +74,20 @@ struct BonusSwipesPromptView: View {
                     .padding(.horizontal, 20)
             }
 
+            HStack(spacing: 5) {
+                Image(systemName: "bolt.fill")
+                    .font(.system(size: 10, weight: .semibold))
+                Text(isTR
+                     ? "Günlük hak: \(remainingGrants)/\(SubscriptionManager.maxDailyBonusGrants)"
+                     : "Daily grants: \(remainingGrants)/\(SubscriptionManager.maxDailyBonusGrants)")
+                    .font(.system(size: 12, weight: .semibold))
+            }
+            .foregroundStyle(Theme.textTertiary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(Theme.surface, in: Capsule())
+            .overlay(Capsule().stroke(Theme.border, lineWidth: 1))
+
             VStack(spacing: 10) {
                 Button { watchAd() } label: {
                     HStack(spacing: 8) {
@@ -71,7 +111,7 @@ struct BonusSwipesPromptView: View {
                 .opacity(adManager.isRewardedReady ? 1 : 0.5)
 
                 Button {
-                    dismiss()
+                    isPresented = false
                     onGoPremium()
                 } label: {
                     Text(isTR ? "Premium'a Geç" : "Get Premium")
@@ -87,7 +127,7 @@ struct BonusSwipesPromptView: View {
             .padding(.horizontal, 24)
             .padding(.top, 4)
 
-            Button(isTR ? "Kapat" : "Close") { dismiss() }
+            Button(isTR ? "Kapat" : "Close") { isPresented = false }
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(Theme.textTertiary)
                 .disabled(isShowingAd)
@@ -95,10 +135,11 @@ struct BonusSwipesPromptView: View {
                 .padding(.bottom, 20)
         }
         .frame(maxWidth: .infinity)
-        .background(Theme.bg)
-        .presentationDetents([.height(420)])
-        .presentationDragIndicator(.hidden)
-        .interactiveDismissDisabled(isShowingAd)
+        .background(
+            Theme.bg
+                .clipShape(UnevenRoundedRectangle(topLeadingRadius: 24, topTrailingRadius: 24))
+                .ignoresSafeArea(edges: .bottom)
+        )
     }
 
     private func watchAd() {
@@ -106,7 +147,7 @@ struct BonusSwipesPromptView: View {
         adManager.showRewarded {
             subManager.grantBonusSwipes()
             isShowingAd = false
-            dismiss()
+            isPresented = false
             onEarnedBonus()
         }
     }
