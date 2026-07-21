@@ -46,7 +46,10 @@ struct PaywallView: View {
                 }
             }
         }
-        .task { await subManager.loadProducts() }
+        .task {
+            await subManager.loadProducts()
+            await subManager.refreshTrialEligibilityIfNeeded()
+        }
         .alert(isTR ? "Hata" : "Error", isPresented: $showError) {
             Button("OK") {}
         } message: {
@@ -116,7 +119,7 @@ struct PaywallView: View {
             tableHeader
             Divider().background(Theme.border)
             featureRow(isTR ? "Reklamsız Deneyim"     : "Ad-Free Experience",     free: false, premium: true)
-            featureRow(isTR ? "Günlük Kaydırma Limiti": "Daily Swipe Limit",       freeText: "200", premiumText: "∞")
+            featureRow(isTR ? "Günlük Kaydırma Limiti": "Daily Swipe Limit",       freeText: "\(SubscriptionManager.freeSwipeLimit)", premiumText: "∞")
             featureRow(isTR ? "Albüm Temizleme"        : "Album Cleaning",          free: false, premium: true)
             featureRow(isTR ? "Duplicate Finder"       : "Duplicate Finder",        free: false, premium: true, isLast: true)
         }
@@ -196,7 +199,10 @@ struct PaywallView: View {
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(Theme.textSecondary)
                     Button {
-                        Task { await subManager.loadProducts() }
+                        Task {
+                            await subManager.loadProducts()
+                            await subManager.refreshTrialEligibilityIfNeeded()
+                        }
                     } label: {
                         Text(isTR ? "Yeniden Dene" : "Retry")
                             .font(.system(size: 14, weight: .semibold))
@@ -323,7 +329,7 @@ struct PaywallView: View {
             }
         } label: {
             ZStack {
-                if subManager.isPurchasing {
+                if subManager.isPurchasing || subManager.isCheckingTrialEligibility {
                     ProgressView().tint(.white)
                 } else {
                     let isWeekly = selectedProductID == SubscriptionManager.weeklyID
@@ -340,7 +346,7 @@ struct PaywallView: View {
             .background(Theme.accentGradient, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .shadow(color: Theme.accent.opacity(0.4), radius: 16, y: 8)
         }
-        .disabled(subManager.isPurchasing || subManager.isLoadingProducts || selectedProduct == nil)
+        .disabled(subManager.isPurchasing || subManager.isLoadingProducts || subManager.isCheckingTrialEligibility || selectedProduct == nil)
     }
 
     // MARK: - Trial Timeline

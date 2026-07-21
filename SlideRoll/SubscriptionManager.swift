@@ -24,9 +24,12 @@ final class SubscriptionManager {
     // Whether the weekly plan's 7-day trial is still available to this user.
     // StoreKit only grants an introductory offer once per subscription group,
     // so someone who already used (and ended) their trial is not eligible
-    // again — defaults to true until checked so behavior is unchanged if the
-    // check hasn't completed yet.
-    var isEligibleForWeeklyTrial = true
+    // again — defaults to false (safe/conservative) until the real check
+    // completes, so the paywall never flashes "Start Free Trial" to someone
+    // who isn't actually eligible. isCheckingTrialEligibility gates the UI
+    // during that check so nothing is tappable with an unverified state.
+    var isEligibleForWeeklyTrial = false
+    var isCheckingTrialEligibility = true
     var dailySwipeCount: Int = 0
     var bonusSwipesEarnedToday: Int = 0
     var activeSubscriptionProductID: String? = nil
@@ -90,17 +93,53 @@ final class SubscriptionManager {
                 (Self.productIDs.firstIndex(of: $0.id) ?? 0) < (Self.productIDs.firstIndex(of: $1.id) ?? 0)
             }
             productLoadFailed = products.isEmpty
-            await refreshTrialEligibility()
         } catch {
             productLoadFailed = true
         }
         await updatePurchasedProducts()
     }
 
+    // Call right before showing the paywall's trial-vs-full-price copy, not
+    // from loadProducts() (which also runs on every app launch to check
+    // isPremium for ads/daily-limit gating) — AppStore.sync() can prompt for
+    // re-authentication, so it should only fire when we're actually about to
+    // decide "Start Free Trial" vs "Get Premium", not on every cold start.
+    func refreshTrialEligibilityIfNeeded() async {
+        isCheckingTrialEligibility = true
+        defer { isCheckingTrialEligibility = false }
+        // Force a fresh sync with Apple's servers before reading any
+        // entitlement/eligibility state below — the on-device StoreKit cache
+        // can be stale or missing older history (like an already-used trial
+        // from weeks ago), which is what let isEligibleForIntroOffer AND the
+        // latestTransaction cross-check both miss a real prior purchase.
+        try? await AppStore.sync()
+        await updatePurchasedProducts()
+        await refreshTrialEligibility()
+    }
+
     private func refreshTrialEligibility() async {
         guard let weekly = products.first(where: { $0.id == Self.weeklyID }),
               let subscription = weekly.subscription else { return }
-        isEligibleForWeeklyTrial = await subscription.isEligibleForIntroOffer
+
+        // isEligibleForIntroOffer is a documented-unreliable StoreKit 2 API —
+        // multiple unresolved Apple Developer Forum threads report it can
+        // return true for users who've already used their trial (and vice
+        // versa). Cross-check the product's own transaction history: any past
+        // verified transaction for this exact product means they've
+        // definitely had it before, regardless of what the eligibility flag
+        // claims.
+        let rawEligible = await subscription.isEligibleForIntroOffer
+        var eligible = rawEligible
+        let latest = await weekly.latestTransaction
+        var latestFound = false
+        if let latest, case .verified = latest {
+            latestFound = true
+            eligible = false
+        }
+        isEligibleForWeeklyTrial = eligible
+        #if DEBUG
+        print("[SubscriptionManager] rawIsEligibleForIntroOffer=\(rawEligible), latestTransactionFound=\(latestFound), finalEligible=\(eligible), purchasedProductIDs=\(purchasedProductIDs)")
+        #endif
     }
 
     // MARK: - Purchase
@@ -124,11 +163,19 @@ final class SubscriptionManager {
             if purchasedProductIDs.isEmpty, case .verified(let t) = verification {
                 purchasedProductIDs.insert(t.productID)
                 activeSubscriptionProductID = t.productID
-                // expirationDate can be nil in Xcode sandbox — fall back to 7 days
-                let expiry = t.expirationDate ?? Date().addingTimeInterval(7 * 24 * 3600)
-                subscriptionExpiryDate = expiry
-                UserDefaults.standard.set(t.productID, forKey: Self.cachedProductIDKey)
-                UserDefaults.standard.set(expiry,      forKey: Self.cachedExpiryKey)
+                // expirationDate can be nil (seen in Sandbox). Only cache a
+                // real expiry — guessing one (e.g. a flat 7 days) is actively
+                // wrong for Sandbox's massively accelerated renewal periods
+                // (a "week" can expire in ~3 minutes there), and would make
+                // the app keep showing premium long after the real
+                // subscription ended. Without a cached expiry,
+                // updatePurchasedProducts() / Transaction.currentEntitlements
+                // remains the source of truth on next launch.
+                if let expiry = t.expirationDate {
+                    subscriptionExpiryDate = expiry
+                    UserDefaults.standard.set(t.productID, forKey: Self.cachedProductIDKey)
+                    UserDefaults.standard.set(expiry,      forKey: Self.cachedExpiryKey)
+                }
             }
             return isPremium
         case .userCancelled:
